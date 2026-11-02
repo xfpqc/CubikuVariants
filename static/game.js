@@ -1,17 +1,16 @@
 /**
- * Cubiku Variants — 3D Anti-Knight
+ * Cubiku Variants — Killer 3D Sudoku (Cages)
  */
 
-let currentVariant = "standard";
+let currentVariant = "killer";
+let currentCages = [];
+let cageMap = [];
 
-// 3D Knight moves: ±2 on one axis, ±1 on another axis, 0 on the third
-const KNIGHT_OFFSETS = [
-    [1, 2, 0], [1, -2, 0], [-1, 2, 0], [-1, -2, 0],
-    [2, 1, 0], [2, -1, 0], [-2, 1, 0], [-2, -1, 0],
-    [1, 0, 2], [1, 0, -2], [-1, 0, 2], [-1, 0, -2],
-    [2, 0, 1], [2, 0, -1], [-2, 0, 1], [-2, 0, -1],
-    [0, 1, 2], [0, 1, -2], [0, -1, 2], [0, -1, -2],
-    [0, 2, 1], [0, 2, -1], [0, -2, 1], [0, -2, -1]
+const CAGE_COLORS = [
+    'rgba(255, 99, 132, 0.15)', 'rgba(54, 162, 235, 0.15)', 'rgba(255, 206, 86, 0.15)', 
+    'rgba(75, 192, 192, 0.15)', 'rgba(153, 102, 255, 0.15)', 'rgba(255, 159, 64, 0.15)',
+    'rgba(199, 199, 199, 0.15)', 'rgba(83, 212, 175, 0.15)', 'rgba(235, 94, 200, 0.15)',
+    'rgba(224, 235, 104, 0.15)', 'rgba(112, 166, 255, 0.15)', 'rgba(255, 150, 150, 0.15)'
 ];
 
 function shuffleArray(array) {
@@ -31,13 +30,19 @@ function isValid(grid, x, y, z, num, n = 3, variant = currentVariant) {
       }
   }
 
-  if (variant === '3d-anti-knight') {
-      for (let [dz, dy, dx] of KNIGHT_OFFSETS) {
-          let nz = z + dz, ny = y + dy, nx = x + dx;
-          if (nz >= 0 && nz < n && ny >= 0 && ny < n && nx >= 0 && nx < n) {
-              if (grid[nz][ny][nx] === num) return false;
-          }
+  if (variant === 'killer' && cageMap && cageMap[z] && cageMap[z][y][x]) {
+      const myCage = cageMap[z][y][x];
+      let currentSum = 0;
+      let emptyInCage = 0;
+      for (const c of myCage.cells) {
+          if (c.z === z && c.y === y && c.x === x) continue;
+          const val = grid[c.z][c.y][c.x];
+          if (val === num) return false; 
+          if (val > 0) currentSum += val;
+          else emptyInCage++;
       }
+      if (currentSum + num > myCage.sum) return false; 
+      if (emptyInCage === 0 && currentSum + num !== myCage.sum) return false; 
   }
   
   return true;
@@ -65,7 +70,7 @@ function solveAndCount(grid, n = 3, count = { val: 0 }, variant = currentVariant
   count.val += 1;
 }
 
-function generateSolvedGrid(grid, n = 3, variant = currentVariant) {
+function generateSolvedGrid(grid, n = 3, variant = 'standard') {
   const cells = [];
   for (let z = 0; z < n; z++) {
       for (let y = 0; y < n; y++) {
@@ -93,56 +98,113 @@ function generateSolvedGrid(grid, n = 3, variant = currentVariant) {
   return true;
 }
 
-function generateUniquePuzzle(n = 3, difficulty = 'medium', variant = currentVariant) {
-  const grid = Array.from({ length: n }, () =>
-      Array.from({ length: n }, () => Array(n).fill(0))
-  );
+function generateCages(solvedGrid) {
+    const cages = [];
+    const unassigned = [];
+    for (let z = 0; z < 3; z++)
+        for (let y = 0; y < 3; y++)
+            for (let x = 0; x < 3; x++)
+                unassigned.push({ z, y, x });
+    
+    shuffleArray(unassigned);
+    let cageId = 0;
+
+    while (unassigned.length > 0) {
+        const start = unassigned.pop();
+        const targetSize = Math.floor(Math.random() * 4) + 2; 
+        const cageCells = [start];
+        let sum = solvedGrid[start.z][start.y][start.x];
+
+        for (let i = 1; i < targetSize; i++) {
+            const neighbors = [];
+            for (const cell of cageCells) {
+                const offsets = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+                for (const [dz, dy, dx] of offsets) {
+                    const nz = cell.z + dz, ny = cell.y + dy, nx = cell.x + dx;
+                    if (nz >= 0 && nz < 3 && ny >= 0 && ny < 3 && nx >= 0 && nx < 3) {
+                        const idx = unassigned.findIndex(u => u.z === nz && u.y === ny && u.x === nx);
+                        if (idx !== -1 && !neighbors.includes(idx)) {
+                            neighbors.push(idx);
+                        }
+                    }
+                }
+            }
+            if (neighbors.length > 0) {
+                shuffleArray(neighbors);
+                const chosenIdx = neighbors[0];
+                const chosenCell = unassigned.splice(chosenIdx, 1)[0];
+                cageCells.push(chosenCell);
+                sum += solvedGrid[chosenCell.z][chosenCell.y][chosenCell.x];
+            } else {
+                break;
+            }
+        }
+        
+        cageCells.sort((a, b) => {
+            if (a.z !== b.z) return a.z - b.z;
+            if (a.y !== b.y) return a.y - b.y;
+            return a.x - b.x;
+        });
+
+        cages.push({
+            id: cageId,
+            cells: cageCells,
+            sum: sum,
+            color: CAGE_COLORS[cageId % CAGE_COLORS.length]
+        });
+        cageId++;
+    }
+    return cages;
+}
+
+function generateUniquePuzzle() {
+  cageMap = emptyGrid();
+  const grid = emptyGrid();
   
   let generated = false;
   let safetyLimit = 0;
   while (!generated && safetyLimit < 10) {
       safetyLimit++;
       grid.forEach(z => z.forEach(y => y.fill(0)));
-      generated = generateSolvedGrid(grid, n, variant);
+      generated = generateSolvedGrid(grid, 3, 'standard'); 
   }
 
   const solvedCopy = JSON.parse(JSON.stringify(grid));
+  currentCages = generateCages(solvedCopy);
+  
+  for (const cage of currentCages) {
+      for (const cell of cage.cells) {
+          cageMap[cell.z][cell.y][cell.x] = cage;
+      }
+  }
 
   let cells = [];
-  for (let z = 0; z < n; z++) {
-      for (let y = 0; y < n; y++) {
-          for (let x = 0; x < n; x++) {
+  for (let z = 0; z < 3; z++) {
+      for (let y = 0; y < 3; y++) {
+          for (let x = 0; x < 3; x++) {
               cells.push({ z, y, x });
           }
       }
   }
   shuffleArray(cells);
 
-  const isVariant = variant !== 'standard';
-  const targetMinClues = difficulty === 'easy' ? (isVariant ? 10 : 12) : (difficulty === 'medium' ? (isVariant ? 7 : 10) : (isVariant ? 5 : 8));
-  let currentClues = n * n * n;
-
   for (const { z, y, x } of cells) {
-      if (currentClues <= targetMinClues && difficulty !== 'hard') break;
-
       const backup = grid[z][y][x];
       grid[z][y][x] = 0;
 
       const gridCopy = JSON.parse(JSON.stringify(grid));
       const solutions = { val: 0 };
-      solveAndCount(gridCopy, n, solutions, variant);
+      solveAndCount(gridCopy, 3, solutions, 'killer');
 
       if (solutions.val !== 1) {
           grid[z][y][x] = backup; 
-      } else {
-          currentClues--;
       }
   }
   
   const clues = [];
-  for (let z = 0; z < n; z++) {
-      for (let y = 0; y < n; y++) {
-          for (let x = 0; x < n; x++) {
+  for (let z = 0; z < 3; z++) {
+      for (let y = 0; y < 3; y++) {
+          for (let x = 0; x < 3; x++) {
               const v = grid[z][y][x];
               if (v !== 0) clues.push([z, y, x, v]);
           }
@@ -151,13 +213,13 @@ function generateUniquePuzzle(n = 3, difficulty = 'medium', variant = currentVar
   return { grid, clues, solvedGrid: solvedCopy };
 }
 
-function generateGame(difficulty = 'medium', variant = currentVariant) {
+function generateGame() {
   let attempts = 0;
   let bestClues = null;
   let bestSolved = null;
   while (attempts < 15) {
       attempts++;
-      const { grid, clues, solvedGrid: candidateSolved } = generateUniquePuzzle(3, difficulty, variant);
+      const { grid, clues, solvedGrid: candidateSolved } = generateUniquePuzzle();
       bestClues = clues;
       bestSolved = candidateSolved;
       solvedGrid = candidateSolved;
@@ -223,19 +285,20 @@ function check3SSC(grid, n = 3, variant = currentVariant) {
       }
   }
 
-  if (variant === '3d-anti-knight') {
-      for (let z = 0; z < n; z++) {
-          for (let y = 0; y < n; y++) {
-              for (let x = 0; x < n; x++) {
-                  const num = grid[z][y][x];
-                  for (let [dz, dy, dx] of KNIGHT_OFFSETS) {
-                      let nz = z + dz, ny = y + dy, nx = x + dx;
-                      if (nz >= 0 && nz < n && ny >= 0 && ny < n && nx >= 0 && nx < n && grid[nz][ny][nx] === num) {
-                          addConflict(z, y, x);
-                          addConflict(nz, ny, nx);
-                      }
-                  }
+  if (variant === 'killer' && currentCages.length > 0) {
+      for (const cage of currentCages) {
+          let currentSum = 0;
+          const cageSeen = new Set();
+          for (const {z, y, x} of cage.cells) {
+              const num = grid[z][y][x];
+              currentSum += num;
+              if (cageSeen.has(num)) {
+                  cage.cells.forEach(c => addConflict(c.z, c.y, c.x));
               }
+              cageSeen.add(num);
+          }
+          if (currentSum !== cage.sum) {
+              cage.cells.forEach(c => addConflict(c.z, c.y, c.x));
           }
       }
   }
@@ -272,51 +335,27 @@ let undoStack    = [];
 
 let activeNumber = null;
 let inspectedNumber = null;
-let currentDifficulty = "medium"; 
 let currentTheme = "cyan";
 let stickyKeysEnabled = false; 
 let pencilMode = false;
 let isGameComplete = false; 
 
-let tutorialMode = false;
-let tutorialStep = 0;
-
-const TUT_GRID = [
-  [[1,5,9], [6,7,2], [8,3,4]],
-  [[4,8,3], [9,1,5], [2,6,7]],
-  [[7,2,6], [3,4,8], [5,9,1]]
-];
-
-const TUT_HOLES = [
-  { z: 0, r: 0, c: 1, val: 5, msg: "Rule 1: Each flat 3x3 slice must contain 1-9. Look at this slice. What number is missing?" },
-  { z: 1, r: 1, c: 0, val: 9, msg: "Rule 2: Horizontal rows cross the cube! The highlighted middle row across all slices contains 1-9. Place the missing number." },
-  { z: 2, r: 0, c: 2, val: 6, msg: "Rule 3: Vertical columns cross the cube! Check the highlighted right-most column across all slices. Place the final number." }
-];
-
-let stats = {
-  easy:   { wins: 0, bestTime: null, totalTime: 0, lastTime: null },
-  medium: { wins: 0, bestTime: null, totalTime: 0, lastTime: null },
-  hard:   { wins: 0, bestTime: null, totalTime: 0, lastTime: null }
-};
+let stats = { wins: 0, bestTime: null, totalTime: 0, lastTime: null };
 
 function savePreferences() {
-  localStorage.setItem('cubiku_prefs', JSON.stringify({
+  localStorage.setItem('cubiku_killer_prefs', JSON.stringify({
     theme: currentTheme,
-    sticky: stickyKeysEnabled,
-    variant: currentVariant,
-    difficulty: currentDifficulty
+    sticky: stickyKeysEnabled
   }));
 }
 
 function loadPreferences() {
-  const savedPrefs = localStorage.getItem('cubiku_prefs');
+  const savedPrefs = localStorage.getItem('cubiku_killer_prefs');
   if (savedPrefs) {
     try {
       const prefs = JSON.parse(savedPrefs);
       currentTheme = prefs.theme || "cyan";
       stickyKeysEnabled = !!prefs.sticky;
-      currentVariant = prefs.variant || "standard";
-      currentDifficulty = prefs.difficulty || "medium";
       
       document.body.setAttribute('data-theme', currentTheme);
       const themeSelect = document.getElementById('theme-select');
@@ -324,57 +363,30 @@ function loadPreferences() {
       
       const stickyToggle = document.getElementById('toggle-sticky-keys');
       if (stickyToggle) stickyToggle.checked = stickyKeysEnabled;
-
-      const variantSelect = document.getElementById('variant-select');
-      if (variantSelect) variantSelect.value = currentVariant;
-      
-      const diffSelect = document.getElementById('difficulty-select');
-      if (diffSelect) diffSelect.value = currentDifficulty;
-
     } catch(e) {}
   }
 }
 
 function saveStats() {
-  localStorage.setItem('cubiku_stats_v2', JSON.stringify(stats));
+  localStorage.setItem('cubiku_killer_stats', JSON.stringify(stats));
   updateStatsUI();
 }
 
 function loadStats() {
-  const savedStatsV2 = localStorage.getItem('cubiku_stats_v2');
-  if (savedStatsV2) {
+  const savedStats = localStorage.getItem('cubiku_killer_stats');
+  if (savedStats) {
     try {
-      stats = JSON.parse(savedStatsV2);
+      stats = JSON.parse(savedStats);
     } catch(e) {}
-  } else {
-    const savedStatsV1 = localStorage.getItem('cubiku_stats');
-    if (savedStatsV1) {
-      try {
-        const parsed = JSON.parse(savedStatsV1);
-        if (parsed.bestTimes) {
-          ['easy', 'medium', 'hard'].forEach(diff => {
-            if (parsed.bestTimes[diff] !== null) {
-              stats[diff].bestTime = parsed.bestTimes[diff];
-              stats[diff].lastTime = parsed.bestTimes[diff];
-              stats[diff].wins = 1;
-              stats[diff].totalTime = parsed.bestTimes[diff];
-            }
-          });
-        }
-      } catch(e) {}
-    }
-  }
+  } 
   updateStatsUI();
 }
 
 function resetStats() {
-  const diff = (currentDifficulty === 'custom') ? 'medium' : currentDifficulty;
-  const capitalizedDiff = diff.charAt(0).toUpperCase() + diff.slice(1);
-  
-  if (confirm(`Are you sure you want to erase your statistics for ${capitalizedDiff} mode? This cannot be undone.`)) {
-    stats[diff] = { wins: 0, bestTime: null, totalTime: 0, lastTime: null };
+  if (confirm(`Are you sure you want to erase your statistics? This cannot be undone.`)) {
+    stats = { wins: 0, bestTime: null, totalTime: 0, lastTime: null };
     saveStats();
-    showMessage(`${capitalizedDiff} statistics reset.`, "info");
+    showMessage(`Statistics reset.`, "info");
     
     const settingsPanel = document.getElementById('settings-panel');
     if (settingsPanel) settingsPanel.style.display = 'none';
@@ -389,28 +401,24 @@ function formatTime(seconds) {
 }
 
 function updateStatsUI() {
-  const diff = currentDifficulty === 'custom' ? 'medium' : currentDifficulty;
-  const currentStats = stats[diff] || stats['medium'];
-
   const elWins = document.getElementById('stat-wins');
-  if (elWins) elWins.textContent = currentStats.wins;
+  if (elWins) elWins.textContent = stats.wins;
 
   const elBest = document.getElementById('stat-best');
-  if (elBest) elBest.textContent = formatTime(currentStats.bestTime);
+  if (elBest) elBest.textContent = formatTime(stats.bestTime);
 
   const elAvg = document.getElementById('stat-avg');
   if (elAvg) {
-    const avg = currentStats.wins > 0 ? Math.floor(currentStats.totalTime / currentStats.wins) : null;
+    const avg = stats.wins > 0 ? Math.floor(stats.totalTime / stats.wins) : null;
     elAvg.textContent = formatTime(avg);
   }
 
   const elLast = document.getElementById('stat-last');
-  if (elLast) elLast.textContent = formatTime(currentStats.lastTime);
+  if (elLast) elLast.textContent = formatTime(stats.lastTime);
 }
 
 function saveGame() {
-  if (clueSet.size === 0) return; 
-  if (tutorialMode) return; 
+  if (clueSet.size === 0 && currentCages.length === 0) return; 
 
   const saveData = {
     state,
@@ -418,15 +426,14 @@ function saveGame() {
     initialGrid,
     solvedGrid,
     clues: Array.from(clueSet),
-    difficulty: currentDifficulty,
-    variant: currentVariant,
+    cages: currentCages,
     timer: timerSeconds
   };
-  localStorage.setItem('cubiku_save', JSON.stringify(saveData));
+  localStorage.setItem('cubiku_killer_save', JSON.stringify(saveData));
 }
 
 function clearSave() {
-  localStorage.removeItem('cubiku_save');
+  localStorage.removeItem('cubiku_killer_save');
 }
 
 function computeSolutionGrid() {
@@ -466,7 +473,7 @@ function solveGridHelper(grid, n = 3, variant = currentVariant) {
 }
 
 function loadGame() {
-  const saved = localStorage.getItem('cubiku_save');
+  const saved = localStorage.getItem('cubiku_killer_save');
   if (!saved) return false;
   
   try {
@@ -484,8 +491,15 @@ function loadGame() {
     initialGrid = data.initialGrid || emptyGrid();
     solvedGrid = data.solvedGrid || computeSolutionGrid();
     clueSet = new Set(data.clues);
-    currentDifficulty = data.difficulty || "medium";
-    currentVariant = data.variant || 'standard';
+    currentCages = data.cages || [];
+    
+    cageMap = emptyGrid();
+    for (const cage of currentCages) {
+        for (const cell of cage.cells) {
+            cageMap[cell.z][cell.y][cell.x] = cage;
+        }
+    }
+
     timerSeconds = data.timer;
     undoStack = [];
     isGameComplete = false; 
@@ -493,14 +507,7 @@ function loadGame() {
     pencilMode = false;
     activeNumber = null;
     
-    const diffSelect = document.getElementById('difficulty-select');
-    if (diffSelect) diffSelect.value = currentDifficulty;
-
-    const varSelect = document.getElementById('variant-select');
-    if (varSelect) varSelect.value = currentVariant;
-
     updateStatsUI(); 
-    
     renderState();
     updateDepletion();
     startTimer(); 
@@ -509,100 +516,6 @@ function loadGame() {
   } catch (e) {
     clearSave();
     return false;
-  }
-}
-
-function startTutorial() {
-  const settingsPanel = document.getElementById('settings-panel');
-  if (settingsPanel) settingsPanel.style.display = 'none';
-
-  tutorialMode = true;
-  tutorialStep = 1;
-  stopTimer();
-  clearSave(); 
-  
-  state = emptyGrid();
-  drafts = emptyDrafts();
-  clueSet = new Set();
-  undoStack = [];
-  isGameComplete = false; 
-  
-  pencilMode = false;
-  activeNumber = null;
-
-  for(let z=0; z<3; z++) {
-    for(let r=0; r<3; r++) {
-      for(let c=0; c<3; c++) {
-        state[z][r][c] = TUT_GRID[z][r][c];
-        clueSet.add(`${z},${r},${c}`);
-      }
-    }
-  }
-  
-  TUT_HOLES.forEach(hole => {
-    state[hole.z][hole.r][hole.c] = 0;
-    clueSet.delete(`${hole.z},${hole.r},${hole.c}`);
-  });
-  
-  solvedGrid = JSON.parse(JSON.stringify(TUT_GRID));
-  renderState();
-  updateDepletion();
-  updateTutorialUI();
-  clearSelection();
-}
-
-function updateTutorialUI() {
-  const target = TUT_HOLES[tutorialStep - 1];
-  showMessage(target.msg, 'info');
-  
-  document.querySelectorAll('.cell').forEach(c => {
-    c.classList.remove('tutorial-dim', 'tutorial-target');
-  });
-  
-  for(let z=0; z<3; z++) {
-    for(let r=0; r<3; r++) {
-      for(let c=0; c<3; c++) {
-        const el = getCell(z,r,c);
-        let inPlane = false;
-        
-        if (tutorialStep === 1 && z === target.z) inPlane = true;
-        if (tutorialStep === 2 && r === target.r) inPlane = true;
-        if (tutorialStep === 3 && c === target.c) inPlane = true;
-        
-        if (!inPlane) {
-          el.classList.add('tutorial-dim');
-        }
-        if (z === target.z && r === target.r && c === target.c) {
-          el.classList.add('tutorial-target');
-        }
-      }
-    }
-  }
-}
-
-function endTutorial() {
-  document.querySelectorAll('.cell').forEach(c => c.classList.remove('tutorial-dim', 'tutorial-target'));
-  
-  showMessage("Tutorial complete! 🎉", "success");
-  
-  const isStartingTutorial = !localStorage.getItem('cubiku_tutorial_complete');
-  
-  if (isStartingTutorial) {
-    localStorage.setItem('cubiku_tutorial_complete', 'true');
-    tutorialMode = false;
-    
-    setTimeout(() => {
-       currentDifficulty = 'easy';
-       currentVariant = 'standard';
-       const diffSelect = document.getElementById('difficulty-select');
-       if (diffSelect) diffSelect.value = 'easy';
-       const varSelect = document.getElementById('variant-select');
-       if (varSelect) varSelect.value = 'standard';
-       updateStatsUI();
-       newGame();
-    }, 15000); 
-  } else {
-    tutorialMode = false;
   }
 }
 
@@ -615,7 +528,7 @@ function startTimer() {
   timerInterval = setInterval(() => {
     timerSeconds++;
     updateTimerDisplay();
-    if (!tutorialMode) saveGame(); 
+    saveGame(); 
   }, 1000);
 }
 
@@ -697,11 +610,6 @@ function applyCrosshair(selZ, selRow, selCol) {
 }
 
 function selectCell(z, row, col) {
-  if (tutorialMode) {
-    const target = TUT_HOLES[tutorialStep - 1];
-    if (z !== target.z || row !== target.r || col !== target.c) return;
-  }
-
   clearHighlights();
   inspectedNumber = null;
   selected = clueSet.has(`${z},${row},${col}`) ? null : { z, row, col };
@@ -774,6 +682,10 @@ function buildGrids() {
         cell.tabIndex    = 0;
         cell.setAttribute('aria-label', `Slice z=${z} row ${row + 1} col ${col + 1}`);
 
+        const cageSumSpan = document.createElement('span');
+        cageSumSpan.className = 'cage-sum';
+        cell.appendChild(cageSumSpan);
+
         const mainVal = document.createElement('span');
         mainVal.className = 'main-value';
         cell.appendChild(mainVal);
@@ -807,9 +719,23 @@ function renderState() {
 
         el.tabIndex = isClue ? -1 : 0;
         el.classList.toggle('clue', isClue);
-        el.classList.remove('conflict', 'flash-conflict', 'tutorial-dim', 'tutorial-target');
+        el.classList.remove('conflict', 'flash-conflict');
 
         const mainValSpan = el.querySelector('.main-value');
+        const cageSumSpan = el.querySelector('.cage-sum');
+        
+        if (cageMap && cageMap[z][row][col]) {
+            const cage = cageMap[z][row][col];
+            el.style.backgroundColor = cage.color;
+            if (cage.cells[0].z === z && cage.cells[0].y === row && cage.cells[0].x === col) {
+                cageSumSpan.textContent = cage.sum;
+            } else {
+                cageSumSpan.textContent = '';
+            }
+        } else {
+            el.style.backgroundColor = '';
+            cageSumSpan.textContent = '';
+        }
         
         if (val > 0) {
             el.classList.remove('draft-mode');
@@ -892,13 +818,10 @@ function removeDraftFromPeers(z, row, col, digit) {
         }
     }
     
-    if (currentVariant === '3d-anti-knight') {
-        for (let [dz, dy, dx] of KNIGHT_OFFSETS) {
-            let nz = z + dz, ny = row + dy, nx = col + dx;
-            if (nz >= 0 && nz < 3 && ny >= 0 && ny < 3 && nx >= 0 && nx < 3) {
-                if (drafts[nz][ny][nx].has(digit)) {
-                    affected.push({z: nz, r: ny, c: nx});
-                }
+    if (currentVariant === 'killer' && cageMap && cageMap[z][row][col]) {
+        for (const c of cageMap[z][row][col].cells) {
+            if ((c.z !== z || c.y !== row || c.x !== col) && drafts[c.z][c.y][c.x].has(digit)) {
+                affected.push({z: c.z, r: c.y, c: c.x});
             }
         }
     }
@@ -930,29 +853,6 @@ function fillCell(z, row, col, digitStr) {
   const digit = digitStr ? Number(digitStr) : 0;
   const beforeVal = state[z][row][col];
   const beforeDrafts = new Set(drafts[z][row][col]);
-
-  if (tutorialMode) {
-    const target = TUT_HOLES[tutorialStep - 1];
-    if (z !== target.z || row !== target.r || col !== target.c) return; 
-    
-    if (digit > 0 && digit !== target.val) {
-      showMessage(`Not quite! Look at the highlighted cells. The correct number is ${target.val}.`, "error");
-      return;
-    }
-    
-    state[z][row][col] = digit;
-    
-    if (digit > 0) {
-        tutorialStep++;
-        if (tutorialStep > 3) {
-          endTutorial();
-        } else {
-          updateTutorialUI();
-        }
-    }
-    renderState();
-    return;
-  }
 
   if (digitStr === '') {
       undoStack.push({ type: 'clear', z, row, col, beforeVal, beforeDrafts });
@@ -998,15 +898,6 @@ function fillCell(z, row, col, digitStr) {
 }
 
 function updateDepletion() {
-  if (tutorialMode) {
-    document.querySelectorAll('.key-btn').forEach(btn => {
-      btn.style.opacity = '1';
-      btn.style.textDecoration = 'none';
-      btn.classList.remove('depleted');
-    });
-    return;
-  }
-
   const counts = Array(10).fill(0);
   for (let z = 0; z < 3; z++) {
     for (let r = 0; r < 3; r++) {
@@ -1086,11 +977,10 @@ function flashConflicts(z, row, col, value) {
     if (oz !== z && state[oz][row][col] === value) clashEls.push(getCell(oz, row, col));
   }
   
-  if (currentVariant === '3d-anti-knight') {
-      for (let [dz, dy, dx] of KNIGHT_OFFSETS) {
-          let nz = z + dz, ny = row + dy, nx = col + dx;
-          if (nz >= 0 && nz < 3 && ny >= 0 && ny < 3 && nx >= 0 && nx < 3 && state[nz][ny][nx] === value) {
-              clashEls.push(getCell(nz, ny, nx));
+  if (currentVariant === 'killer' && cageMap && cageMap[z][row][col]) {
+      for (const c of cageMap[z][row][col].cells) {
+          if (c.z !== z || c.y !== row || c.x !== col) {
+              if (state[c.z][c.y][c.x] === value) clashEls.push(getCell(c.z, c.y, c.x));
           }
       }
   }
@@ -1297,21 +1187,16 @@ async function newGame() {
   stopTimer();
   clearSave();
   clearSelection();
-  tutorialMode = false;
   isGameComplete = false; 
   
   pencilMode = false;
   activeNumber = null;
   updateKeyboardUI();
 
-  document.querySelectorAll('.cell').forEach(c => {
-    c.classList.remove('tutorial-dim', 'tutorial-target');
-  });
-
   await new Promise(resolve => setTimeout(resolve, 50));
 
   try {
-    const clues = generateGame(currentDifficulty, currentVariant);
+    const clues = generateGame();
 
     state = emptyGrid();
     drafts = emptyDrafts();
@@ -1330,63 +1215,12 @@ async function newGame() {
     updateDepletion(); 
     startTimer();
     saveGame(); 
-    let variantMsg = currentVariant !== 'standard' ? ` [${currentVariant.replace('-', ' ').toUpperCase()}]` : '';
-    showMessage(`New puzzle loaded${variantMsg}. Good luck!`, 'info');
+    showMessage(`New puzzle loaded.`, 'info');
   } catch (err) {
     showMessage(`Failed to load puzzle: ${err.message}`, 'error');
   } finally {
     setLoading(false);
   }
-}
-
-function loadGameFromSeed(seedStr, difficultyStr, variantStr) {
-    setLoading(true);
-    state = emptyGrid();
-    drafts = emptyDrafts();
-    initialGrid = emptyGrid();
-    clueSet = new Set();
-    undoStack = [];
-    timerSeconds = 0;
-    isGameComplete = false;
-    clearSelection(); 
-    
-    pencilMode = false;
-    activeNumber = null;
-    updateKeyboardUI();
-
-    currentDifficulty = difficultyStr || 'custom';
-    currentVariant = variantStr || 'standard';
-    
-    let index = 0;
-    for (let z = 0; z < 3; z++) {
-      for (let row = 0; row < 3; row++) {
-        for (let col = 0; col < 3; col++) {
-          let val = parseInt(seedStr[index], 10);
-          if (val > 0) {
-            state[z][row][col] = val;
-            initialGrid[z][row][col] = val;
-            clueSet.add(`${z},${row},${col}`);
-          }
-          index++;
-        }
-      }
-    }
-    
-    solvedGrid = computeSolutionGrid();
-    const diffSelect = document.getElementById('difficulty-select');
-    if (diffSelect) diffSelect.value = currentDifficulty;
-
-    const varSelect = document.getElementById('variant-select');
-    if (varSelect) varSelect.value = currentVariant;
-
-    updateStatsUI();
-    
-    renderState();
-    updateDepletion();
-    startTimer();
-    setLoading(false);
-    saveGame();
-    showMessage('Shared puzzle loaded!', 'info');
 }
 
 async function checkSolution() {
@@ -1411,13 +1245,12 @@ async function checkSolution() {
       clearSelection();
       clearSave(); 
       
-      const diff = (currentDifficulty === 'custom') ? 'medium' : currentDifficulty;
-      stats[diff].wins++;
-      stats[diff].totalTime += timerSeconds;
-      stats[diff].lastTime = timerSeconds;
+      stats.wins++;
+      stats.totalTime += timerSeconds;
+      stats.lastTime = timerSeconds;
       
-      if (stats[diff].bestTime === null || timerSeconds < stats[diff].bestTime) {
-        stats[diff].bestTime = timerSeconds;
+      if (stats.bestTime === null || timerSeconds < stats.bestTime) {
+        stats.bestTime = timerSeconds;
       }
       saveStats();
 
@@ -1445,10 +1278,7 @@ function repairDOM() {
         pencilBtn.removeAttribute('disabled');
         pencilBtn.title = "Toggle Pencil Mode";
         pencilBtn.className = 'key-btn';
-        
         pencilBtn.dataset.val = 'pencil';
-        pencilBtn.setAttribute('data-val', 'pencil'); 
-        
         pencilBtn.style.setProperty('pointer-events', 'auto', 'important');
         pencilBtn.style.setProperty('cursor', 'pointer', 'important');
         pencilBtn.style.setProperty('opacity', '1', 'important');
@@ -1463,12 +1293,6 @@ function repairDOM() {
 
 function init() {
   repairDOM(); 
-
-  if (navigator.storage && navigator.storage.persist) {
-    navigator.storage.persist().then(persistent => {
-      console.log(persistent ? "Storage is persistent." : "Storage is temporary.");
-    });
-  }
 
   buildGrids();
   loadPreferences();
@@ -1509,14 +1333,6 @@ function init() {
 
   const btnZen = document.getElementById('btn-zen');
   if (btnZen) btnZen.addEventListener('click', toggleZen);
-  
-  const btnSettingsTut = document.getElementById('btn-settings-tutorial');
-  if (btnSettingsTut) {
-      btnSettingsTut.addEventListener('click', () => {
-          document.getElementById('settings-panel').style.display = 'none';
-          startTutorial();
-      });
-  }
 
   const btnSettingsReset = document.getElementById('btn-settings-reset-stats');
   if (btnSettingsReset) {
@@ -1524,23 +1340,6 @@ function init() {
           e.stopPropagation();
           resetStats();
       });
-  }
-
-  const diffSelect = document.getElementById('difficulty-select');
-  if (diffSelect) {
-    diffSelect.addEventListener('change', (e) => {
-      currentDifficulty = e.target.value;
-      updateStatsUI();
-      savePreferences();
-    });
-  }
-
-  const varSelect = document.getElementById('variant-select');
-  if (varSelect) {
-    varSelect.addEventListener('change', (e) => {
-      currentVariant = e.target.value;
-      savePreferences();
-    });
   }
 
   const themeSelect = document.getElementById('theme-select');
@@ -1599,15 +1398,7 @@ function init() {
     }
   });
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const boardSeed = urlParams.get('b');
-  const difficultySeed = urlParams.get('d');
-  const variantSeed = urlParams.get('v');
-
-  if (boardSeed && boardSeed.length === 27 && /^\d+$/.test(boardSeed)) {
-      loadGameFromSeed(boardSeed, difficultySeed, variantSeed);
-      window.history.replaceState({}, document.title, window.location.pathname); 
-  } else if (!loadGame()) {
+  if (!loadGame()) {
       newGame();
   }
 }

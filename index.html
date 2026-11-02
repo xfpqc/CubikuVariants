@@ -2,19 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Cubiku — 3D Sudoku Puzzle Game</title>
-  <meta name="description" content="A minimalist, offline-capable 3D Sudoku puzzle game built by Trevor Murengu Mulindi." />
+  <title>Cubiku Variants — Killer 3D Sudoku</title>
+  <meta name="description" content="A hardcore Killer 3D Sudoku puzzle game built by Trevor Murengu Mulindi." />
   <meta name="author" content="Trevor Murengu Mulindi" />
   
-  <meta property="og:title" content="Cubiku — 3D Sudoku Puzzle Game" />
-  <meta property="og:description" content="A minimalist, offline-capable 3D Sudoku puzzle game built by Trevor Murengu Mulindi." />
+  <meta property="og:title" content="Cubiku Variants — Killer 3D Sudoku" />
+  <meta property="og:description" content="A hardcore Killer 3D Sudoku puzzle game built by Trevor Murengu Mulindi." />
   <meta property="og:type" content="website" />
-  <meta property="og:image" content="https://cubiku.onrender.com/static/icon-512.png" />
-
-  <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="Cubiku — 3D Sudoku Puzzle Game" />
-  <meta name="twitter:description" content="A minimalist, offline-capable 3D Sudoku puzzle game built by Trevor Murengu Mulindi." />
-  <meta name="twitter:image" content="https://cubiku.onrender.com/static/icon-512.png" />
+  <meta property="og:image" content="./static/icon-512.png" />
 
   <meta name="theme-color" content="#121212" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -23,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="./static/style.css?v=54" />
+  <link rel="stylesheet" href="./static/style.css?v=56" />
   <link rel="manifest" href="./static/manifest.json" />
   
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -36,7 +31,7 @@
 
     <header>
       <h1>Cubiku</h1>
-      <p class="description">3-dimensional Sudoku</p>
+      <p class="description">Killer 3D Sudoku</p>
     </header>
 
     <div class="top-action-bar">
@@ -77,13 +72,6 @@
         </button>
 
         <div id="settings-panel" class="settings-panel" style="display: none;">
-          <div class="setting-item action-item" id="btn-settings-tutorial">
-            <span>Tutorial</span>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" style="color: var(--accent);">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polygon points="10 8 16 12 10 16 10 8"></polygon>
-            </svg>
-          </div>
           <div class="setting-item action-item" id="btn-settings-reset-stats">
             <span>Reset Stats</span>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" style="color: var(--error-color);">
@@ -93,27 +81,6 @@
           </div>
           
           <div class="setting-divider"></div>
-          
-          <div class="setting-item">
-            <span>Difficulty</span>
-            <div class="select-wrapper">
-              <select id="difficulty-select">
-                <option value="easy">Easy</option>
-                <option value="medium" selected>Medium</option>
-                <option value="hard">Hard</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="setting-item">
-            <span>Variant</span>
-            <div class="select-wrapper">
-              <select id="variant-select">
-                <option value="standard" selected>Standard</option>
-                <option value="3d-anti-knight">Anti-Knight</option>
-              </select>
-            </div>
-          </div>
           
           <div class="setting-item">
             <span>Accent</span>
@@ -212,24 +179,6 @@
 
   </div>
 
-  <div id="rules-modal" class="modal-overlay hidden">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Welcome to Cubiku!</h2>
-        <button id="btn-close-rules" class="btn-icon" aria-label="Close rules">&times;</button>
-      </div>
-      <div class="modal-body" style="text-align: center;">
-        <p style="margin-bottom: 1.5rem; color: var(--text-muted);">
-          Instead of a flat 9x9 grid, you are solving a 3x3x3 cube that has been sliced into three flat boards. The rules of Sudoku apply, but across three dimensions.
-        </p>
-        <div style="display: flex; flex-direction: column; gap: 10px; align-items: center; justify-content: center; margin-top: 1rem;">
-          <button id="btn-start-tutorial" class="btn btn-primary" style="width: 100%; max-width: 250px;">Play Quick Tutorial (1 Min)</button>
-          <button id="btn-skip-tutorial" class="btn" style="width: 100%; max-width: 250px; background: rgba(255,255,255,0.05); color: var(--text-primary); border: 1px solid var(--grid-line);">Skip to Puzzle</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -239,6 +188,6 @@
     }
   </script>
   
-  <script src="./static/game.js?v=54"></script>
+  <script src="./static/game.js?v=56"></script>
 </body>
 </html>
