@@ -1,5 +1,5 @@
 /* =========================================================
-   Cubiku Variants v68 — Zero 'auto' margins, rigid natural layout
+   Cubiku Variants v69 — Strict Viewport + Deadspace Top Padding
    ========================================================= */
 
 *, *::before, *::after {
@@ -37,8 +37,9 @@ body[data-theme="silver"] { --accent: #9CA3AF; --ch-bg: rgba(156, 163, 175, 0.05
 :root { --clue-color: var(--accent); }
 
 html, body { 
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden; /* Hard lock on root body scroll */
   background:  var(--bg);
   color:       var(--text-primary);
   font-family: 'Poppins', system-ui, sans-serif;
@@ -98,16 +99,17 @@ html, body {
 
 @media (max-width: 599px) {
   .page-wrapper {
-    min-height:      100vh;
-    min-height:      100dvh;
+    height:          100vh;
+    height:          100dvh;
+    overflow:        hidden; /* Kills ghost scroll */
     justify-content: flex-start;
-    padding:         3.6rem 0.5rem 0.5rem; 
+    padding:         3.5rem 0.5rem 0.5rem; /* Top deadspace buffer */
     gap:             0;
   }
   .app-header { 
     width: 100%; 
     margin-top: 0;
-    margin-bottom: 4.8rem; 
+    margin-bottom: 3.5rem; 
   }
   .super-title { font-size: 0.65rem; margin-bottom: -0.2rem; }
   h1 { font-size: 2.1rem; }
@@ -115,21 +117,21 @@ html, body {
   .top-action-bar { margin-top: 0.8rem; margin-bottom: 0; }
   .message-bar { min-height: auto; padding: 0.05rem 0.5rem; font-size: 0.72rem; margin: 0 auto; }
   
-  /* 6px gap and rigid bottom margin */
-  .slices-container { gap: 6px; margin-top: 1rem; margin-bottom: 1.5rem; }
+  /* Restored 6px gap between 3D slices */
+  .slices-container { gap: 6px; margin-top: 1rem; margin-bottom: 1.2rem; }
   
-  /* Fixed spacing, no auto margins anywhere */
+  /* Full size keyboard and margins maintained */
   .keyboard-container { max-width: 380px; gap: 6px; margin-top: 0; margin-bottom: 0; }
   .key-btn { height: 44px; font-size: 1.25rem; border-radius: 6px; }
   
   .stats-container { 
-    margin-top: 1.5rem; 
+    margin-top: 1.2rem; 
     padding-top: 0; 
     grid-template-columns: repeat(2, 1fr) !important; 
     gap: 0.8rem 1rem !important; 
   }
   
-  footer { margin-top: 1.5rem; padding-bottom: env(safe-area-inset-bottom); } 
+  footer { margin-top: 1.2rem; padding-bottom: env(safe-area-inset-bottom); } 
 }
 
 /* =========================================================
