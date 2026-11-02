@@ -1,5 +1,5 @@
 /* =========================================================
-   Cubiku Variants v64 — Unsquished Desktop Keys + Mobile Spacing
+   Cubiku Variants v65 — Tuned Desktop Keys + Perfect Mobile Fit
    ========================================================= */
 
 *, *::before, *::after {
@@ -78,16 +78,16 @@ html, body {
     gap: 12px; 
   }
   
-  /* Removed strict vh constraints to allow wide, standard-looking keys */
+  /* Shrunk desktop keys uniformly */
   .keyboard-container { 
-    max-width: 480px; 
-    margin-top: 1rem !important; 
-    gap: 10px; 
+    max-width: 420px; 
+    margin-top: 0.8rem !important; 
+    gap: 8px; 
   }
-  .key-btn { height: 54px; font-size: 1.5rem; border-radius: 8px; }
+  .key-btn { height: 46px; font-size: 1.35rem; border-radius: 8px; }
   
   .stats-container { 
-    margin-top: 1.5rem !important; 
+    margin-top: 1rem !important; 
     grid-template-columns: repeat(4, 1fr); 
     gap: 1rem; 
   }
@@ -102,7 +102,7 @@ html, body {
     min-height:      100vh;
     min-height:      100dvh;
     justify-content: flex-start;
-    padding:         3.6rem 0.5rem 1.5rem; 
+    padding:         3.6rem 0.5rem 0.5rem; /* Reduced bottom padding to cut excess scroll */
     gap:             0;
   }
   .app-header { 
@@ -121,15 +121,15 @@ html, body {
   .keyboard-container { max-width: 380px; gap: 6px; margin-bottom: 0; }
   .key-btn { height: 44px; font-size: 1.25rem; border-radius: 6px; }
   
-  /* Removed 'margin-top: auto' so stats pull up directly beneath keypad */
+  /* Forces stats grid to push down to available bottom space */
   .stats-container { 
-    margin-top: 1.5rem; 
-    padding-top: 0; 
+    margin-top: auto; 
+    padding-top: 1.5rem; 
     grid-template-columns: repeat(2, 1fr) !important; 
     gap: 0.8rem 1rem !important; 
   }
   
-  footer { margin-top: 2rem; padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
+  footer { margin-top: 1.5rem; padding-bottom: env(safe-area-inset-bottom); } /* Removed trailing phantom gap */
 }
 
 /* =========================================================
