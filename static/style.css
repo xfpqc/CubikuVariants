@@ -1,5 +1,5 @@
 /* =========================================================
-   Cubiku Variants v59 — Mobile Fit & Multicolor Title
+   Cubiku Variants v60 — Killer Super-Title & Modern Header
    ========================================================= */
 
 *, *::before, *::after {
@@ -76,41 +76,46 @@ html, body {
     min-height:      100vh;
     min-height:      100dvh;
     justify-content: flex-start;
-    padding:         2.4rem 0.5rem 1rem; /* Tightened top padding for better mobile fit */
+    padding:         2.4rem 0.5rem 1rem;
     gap:             0;
   }
-  header { width: 100%; margin-bottom: 0; }
+  .app-header { width: 100%; margin-bottom: 0; }
+  .super-title { font-size: 0.65rem; margin-bottom: -0.2rem; }
   h1 { font-size: 2.1rem; }
-  .description { font-size: 0.7rem; margin-top: 0; margin-bottom: 4rem; }
-  .top-action-bar { margin-top: 0; margin-bottom: 0; }
+  .top-action-bar { margin-top: 0.8rem; margin-bottom: 0; }
   .message-bar { min-height: auto; padding: 0.05rem 0.5rem; font-size: 0.72rem; margin: 0 auto; }
   .slices-container { gap: 1px; margin-top: 1rem; margin-bottom: 1rem; }
   .stats-container { margin-top: auto; padding-top: 1rem; gap: 0.5rem; }
   footer { margin-top: 2rem; padding-bottom: calc(0.5rem + env(safe-area-inset-bottom)); }
 }
 
-header { text-align: center; }
-
-h1 {
-  font-size:      clamp(2.2rem, 8vw, 3rem);
-  font-weight:    700;
-  letter-spacing: -1px;
+.app-header {
+  text-align: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.5rem;
 }
 
-/* Vibrant Cage Colors for Title */
-.multicolor-title span:nth-child(1) { color: #FF5757; } 
-.multicolor-title span:nth-child(2) { color: #3399FF; } 
-.multicolor-title span:nth-child(3) { color: #FFCC00; } 
-.multicolor-title span:nth-child(4) { color: #2ECC71; } 
-.multicolor-title span:nth-child(5) { color: #9B59B6; } 
-.multicolor-title span:nth-child(6) { color: #FF8000; } 
+.super-title {
+  color: var(--accent);
+  font-size: clamp(0.7rem, 2.5vw, 0.9rem);
+  font-weight: 600;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  margin-bottom: -0.3rem; 
+  z-index: 2;
+  margin-left: 5px; 
+}
 
-.description {
-  margin-top:  0.25rem;
-  color:       var(--text-muted);
-  font-size:   clamp(0.72rem, 2.2vw, 0.85rem);
-  font-weight: 300;
-  letter-spacing: 0.3px;
+h1 {
+  font-size: clamp(2.4rem, 8vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: var(--text-primary);
+  margin: 0;
 }
 
 .top-action-bar {
@@ -247,8 +252,8 @@ footer { color: var(--text-muted); font-size: clamp(0.68rem, 2vw, 0.78rem); font
 
 @media (min-width: 1400px) and (min-height: 850px) {
   .page-wrapper { max-width: 1400px; padding: 1.5rem 2rem; gap: 1rem; }
-  header h1 { font-size: 4rem; }
-  .description { font-size: 1.1rem; }
+  h1 { font-size: 4rem; }
+  .super-title { font-size: 1.1rem; }
   .slices-container { max-width: 1000px; width: 75vh; gap: 20px; }
   .grid { border-width: 4px; gap: 3px; border-radius: 10px; }
   .cell { font-size: 2.2rem; }

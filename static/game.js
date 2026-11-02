@@ -1,5 +1,5 @@
 /**
- * Cubiku Variants v58 — Killer 3D Sudoku
+ * Cubiku Variants v60 — Killer 3D Sudoku
  */
 
 let currentVariant = "killer";
@@ -120,7 +120,7 @@ function generateCages(solvedGrid) {
 
     while (unassigned.length > 0) {
         const start = unassigned.pop();
-        const targetSize = Math.floor(Math.random() * 3) + 2; // size 2 to 4
+        const targetSize = Math.floor(Math.random() * 3) + 2; 
         const cageCells = [start];
         let sum = solvedGrid[start.z][start.y][start.x];
 
@@ -149,7 +149,6 @@ function generateCages(solvedGrid) {
             }
         }
         
-        // Guarantee no 1-cell cages: Merge orphan into an adjacent cage
         if (cageCells.length === 1 && cages.length > 0) {
             const loneCell = cageCells[0];
             const offsets = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
@@ -187,7 +186,6 @@ function generateCages(solvedGrid) {
         }
     }
 
-    // Sort cells inside each cage
     for (const cage of cages) {
         cage.cells.sort((a, b) => {
             if (a.z !== b.z) return a.z - b.z;
@@ -1265,6 +1263,9 @@ async function newGame() {
     updateDepletion(); 
     startTimer();
     saveGame(); 
+    
+    showMessage("Good luck!", "info");
+    
   } catch (err) {
     showMessage(`Failed to load puzzle: ${err.message}`, 'error');
   } finally {
