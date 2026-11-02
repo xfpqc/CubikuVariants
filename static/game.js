@@ -1,8 +1,18 @@
 /**
- * Cubiku — 3D Sudoku frontend (100% Client-Side Engine)
+ * Cubiku Variants — 3D Anti-Knight
  */
 
 let currentVariant = "standard";
+
+// 3D Knight moves: ±2 on one axis, ±1 on another axis, 0 on the third
+const KNIGHT_OFFSETS = [
+    [1, 2, 0], [1, -2, 0], [-1, 2, 0], [-1, -2, 0],
+    [2, 1, 0], [2, -1, 0], [-2, 1, 0], [-2, -1, 0],
+    [1, 0, 2], [1, 0, -2], [-1, 0, 2], [-1, 0, -2],
+    [2, 0, 1], [2, 0, -1], [-2, 0, 1], [-2, 0, -1],
+    [0, 1, 2], [0, 1, -2], [0, -1, 2], [0, -1, -2],
+    [0, 2, 1], [0, 2, -1], [0, -2, 1], [0, -2, -1]
+];
 
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -21,16 +31,11 @@ function isValid(grid, x, y, z, num, n = 3, variant = currentVariant) {
       }
   }
 
-  if (variant === '3d-anti-king') {
-      const offsets = [-1, 1];
-      for (let dz of offsets) {
-          for (let dy of offsets) {
-              for (let dx of offsets) {
-                  let nz = z + dz, ny = y + dy, nx = x + dx;
-                  if (nz >= 0 && nz < n && ny >= 0 && ny < n && nx >= 0 && nx < n) {
-                      if (grid[nz][ny][nx] === num) return false;
-                  }
-              }
+  if (variant === '3d-anti-knight') {
+      for (let [dz, dy, dx] of KNIGHT_OFFSETS) {
+          let nz = z + dz, ny = y + dy, nx = x + dx;
+          if (nz >= 0 && nz < n && ny >= 0 && ny < n && nx >= 0 && nx < n) {
+              if (grid[nz][ny][nx] === num) return false;
           }
       }
   }
@@ -218,21 +223,16 @@ function check3SSC(grid, n = 3, variant = currentVariant) {
       }
   }
 
-  if (variant === '3d-anti-king') {
+  if (variant === '3d-anti-knight') {
       for (let z = 0; z < n; z++) {
           for (let y = 0; y < n; y++) {
               for (let x = 0; x < n; x++) {
                   const num = grid[z][y][x];
-                  const offsets = [-1, 1];
-                  for (let dz of offsets) {
-                      for (let dy of offsets) {
-                          for (let dx of offsets) {
-                              let nz = z + dz, ny = y + dy, nx = x + dx;
-                              if (nz >= 0 && nz < n && ny >= 0 && ny < n && nx >= 0 && nx < n && grid[nz][ny][nx] === num) {
-                                  addConflict(z, y, x);
-                                  addConflict(nz, ny, nx);
-                              }
-                          }
+                  for (let [dz, dy, dx] of KNIGHT_OFFSETS) {
+                      let nz = z + dz, ny = y + dy, nx = x + dx;
+                      if (nz >= 0 && nz < n && ny >= 0 && ny < n && nx >= 0 && nx < n && grid[nz][ny][nx] === num) {
+                          addConflict(z, y, x);
+                          addConflict(nz, ny, nx);
                       }
                   }
               }
@@ -892,17 +892,12 @@ function removeDraftFromPeers(z, row, col, digit) {
         }
     }
     
-    if (currentVariant === '3d-anti-king') {
-        const offsets = [-1, 1];
-        for (let dz of offsets) {
-            for (let dy of offsets) {
-                for (let dx of offsets) {
-                    let nz = z + dz, ny = row + dy, nx = col + dx;
-                    if (nz >= 0 && nz < 3 && ny >= 0 && ny < 3 && nx >= 0 && nx < 3) {
-                        if (drafts[nz][ny][nx].has(digit)) {
-                            affected.push({z: nz, r: ny, c: nx});
-                        }
-                    }
+    if (currentVariant === '3d-anti-knight') {
+        for (let [dz, dy, dx] of KNIGHT_OFFSETS) {
+            let nz = z + dz, ny = row + dy, nx = col + dx;
+            if (nz >= 0 && nz < 3 && ny >= 0 && ny < 3 && nx >= 0 && nx < 3) {
+                if (drafts[nz][ny][nx].has(digit)) {
+                    affected.push({z: nz, r: ny, c: nx});
                 }
             }
         }
@@ -1085,22 +1080,17 @@ function flashConflicts(z, row, col, value) {
     if (c !== col && state[z][row][c] === value) clashEls.push(getCell(z, row, c));
   }
   for (let r = 0; r < 3; r++) {
-    if (r !== row && state[z][r][col] === value) clashEls.push(getCell(z, row, col));
+    if (r !== row && state[z][r][col] === value) clashEls.push(getCell(z, r, col));
   }
   for (let oz = 0; oz < 3; oz++) {
     if (oz !== z && state[oz][row][col] === value) clashEls.push(getCell(oz, row, col));
   }
   
-  if (currentVariant === '3d-anti-king') {
-      const offsets = [-1, 1];
-      for (let dz of offsets) {
-          for (let dy of offsets) {
-              for (let dx of offsets) {
-                  let nz = z + dz, ny = row + dy, nx = col + dx;
-                  if (nz >= 0 && nz < 3 && ny >= 0 && ny < 3 && nx >= 0 && nx < 3 && state[nz][ny][nx] === value) {
-                      clashEls.push(getCell(nz, ny, nx));
-                  }
-              }
+  if (currentVariant === '3d-anti-knight') {
+      for (let [dz, dy, dx] of KNIGHT_OFFSETS) {
+          let nz = z + dz, ny = row + dy, nx = col + dx;
+          if (nz >= 0 && nz < 3 && ny >= 0 && ny < 3 && nx >= 0 && nx < 3 && state[nz][ny][nx] === value) {
+              clashEls.push(getCell(nz, ny, nx));
           }
       }
   }
