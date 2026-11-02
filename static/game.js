@@ -588,8 +588,8 @@ function hideMessage() {
 }
 
 function clearHighlights() {
-  document.querySelectorAll('.cell.active-cell, .cell.constraint-highlight')
-    .forEach(el => el.classList.remove('active-cell', 'constraint-highlight'));
+  document.querySelectorAll('.cell.active-cell, .cell.constraint-highlight, .cell.cage-highlight')
+    .forEach(el => el.classList.remove('active-cell', 'constraint-highlight', 'cage-highlight'));
 }
 
 function applyCrosshair(selZ, selRow, selCol) {
@@ -605,6 +605,14 @@ function applyCrosshair(selZ, selRow, selCol) {
           el.classList.add('constraint-highlight');
         }
       }
+    }
+  }
+
+  if (cageMap && cageMap[selZ] && cageMap[selZ][selRow] && cageMap[selZ][selRow][selCol]) {
+    const cage = cageMap[selZ][selRow][selCol];
+    for (const c of cage.cells) {
+      const el = getCell(c.z, c.y, c.x);
+      if (el) el.classList.add('cage-highlight');
     }
   }
 }
@@ -1215,7 +1223,6 @@ async function newGame() {
     updateDepletion(); 
     startTimer();
     saveGame(); 
-    showMessage(`New puzzle loaded.`, 'info');
   } catch (err) {
     showMessage(`Failed to load puzzle: ${err.message}`, 'error');
   } finally {
