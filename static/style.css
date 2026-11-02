@@ -1,5 +1,5 @@
 /* =========================================================
-   Cubiku Variants v66 — Fixed Mobile Scroll & Desktop Keys
+   Cubiku Variants v68 — Zero 'auto' margins, rigid natural layout
    ========================================================= */
 
 *, *::before, *::after {
@@ -67,7 +67,7 @@ html, body {
     height:          100dvh;
     max-height:      100dvh;
     padding:         0.4rem 1rem 0.6rem;
-    gap:             0.2rem;
+    gap:             0;
     overflow:        hidden;
   }
   .app-header { margin-top: 0.5rem; margin-bottom: 0; }
@@ -78,16 +78,15 @@ html, body {
     gap: 12px; 
   }
   
-  /* Reduced desktop keys further */
   .keyboard-container { 
-    max-width: 360px; 
-    margin-top: 0.8rem !important; 
-    gap: 6px; 
+    max-width: 480px; 
+    margin-top: 0.5rem !important; 
+    gap: 10px; 
   }
-  .key-btn { height: 42px; font-size: 1.25rem; border-radius: 6px; }
+  .key-btn { height: 54px; font-size: 1.5rem; border-radius: 8px; }
   
   .stats-container { 
-    margin-top: 1rem !important; 
+    margin-top: 0.5rem !important; 
     grid-template-columns: repeat(4, 1fr); 
     gap: 1rem; 
   }
@@ -116,12 +115,13 @@ html, body {
   .top-action-bar { margin-top: 0.8rem; margin-bottom: 0; }
   .message-bar { min-height: auto; padding: 0.05rem 0.5rem; font-size: 0.72rem; margin: 0 auto; }
   
-  .slices-container { gap: 1px; margin-top: 1rem; margin-bottom: 1rem; }
+  /* 6px gap and rigid bottom margin */
+  .slices-container { gap: 6px; margin-top: 1rem; margin-bottom: 1.5rem; }
   
-  .keyboard-container { max-width: 380px; gap: 6px; margin-bottom: 0; }
+  /* Fixed spacing, no auto margins anywhere */
+  .keyboard-container { max-width: 380px; gap: 6px; margin-top: 0; margin-bottom: 0; }
   .key-btn { height: 44px; font-size: 1.25rem; border-radius: 6px; }
   
-  /* Fixed top margin replacing 'auto' to kill the empty scroll space */
   .stats-container { 
     margin-top: 1.5rem; 
     padding-top: 0; 
