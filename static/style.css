@@ -1,5 +1,5 @@
 /* =========================================================
-   Cubiku Variants v70 — Adjusted Top Deadspace & Keyboard-Stats Gap
+   Cubiku Variants v71 — Tuned Vertical Spacing Zones
    ========================================================= */
 
 *, *::before, *::after {
@@ -103,13 +103,13 @@ html, body {
     height:          100dvh;
     overflow:        hidden; 
     justify-content: flex-start;
-    padding:         4.5rem 0.5rem 0.5rem; /* Increased top deadspace above title */
+    padding:         5.2rem 0.5rem 0.5rem; /* 1. Zone 1: More space ABOVE the title */
     gap:             0;
   }
   .app-header { 
     width: 100%; 
     margin-top: 0;
-    margin-bottom: 3.2rem; 
+    margin-bottom: 4.2rem; /* 2. Zone 2: More space BELOW the title */
   }
   .super-title { font-size: 0.65rem; margin-bottom: -0.2rem; }
   h1 { font-size: 2.1rem; }
@@ -122,15 +122,17 @@ html, body {
   .keyboard-container { max-width: 380px; gap: 6px; margin-top: 0; margin-bottom: 0; }
   .key-btn { height: 44px; font-size: 1.25rem; border-radius: 6px; }
   
-  /* Increased top margin to add space between the keypad and stats grid */
   .stats-container { 
-    margin-top: 2rem; 
+    margin-top: 2.6rem; /* 3. Zone 3: More space ABOVE the stats grid */
     padding-top: 0; 
     grid-template-columns: repeat(2, 1fr) !important; 
     gap: 0.8rem 1rem !important; 
   }
   
-  footer { margin-top: 1rem; padding-bottom: env(safe-area-inset-bottom); } 
+  footer { 
+    margin-top: 1.8rem; /* 4. Zone 4: More space ABOVE the footnote */
+    padding-bottom: env(safe-area-inset-bottom); 
+  } 
 }
 
 /* =========================================================
