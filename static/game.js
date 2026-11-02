@@ -1,16 +1,25 @@
 /**
- * Cubiku Variants — Killer 3D Sudoku (Cages)
+ * Cubiku Variants v58 — Killer 3D Sudoku
  */
 
 let currentVariant = "killer";
 let currentCages = [];
 let cageMap = [];
 
+/* High-contrast, vibrant cage colors */
 const CAGE_COLORS = [
-    'rgba(255, 99, 132, 0.15)', 'rgba(54, 162, 235, 0.15)', 'rgba(255, 206, 86, 0.15)', 
-    'rgba(75, 192, 192, 0.15)', 'rgba(153, 102, 255, 0.15)', 'rgba(255, 159, 64, 0.15)',
-    'rgba(199, 199, 199, 0.15)', 'rgba(83, 212, 175, 0.15)', 'rgba(235, 94, 200, 0.15)',
-    'rgba(224, 235, 104, 0.15)', 'rgba(112, 166, 255, 0.15)', 'rgba(255, 150, 150, 0.15)'
+    'rgba(255, 87, 87, 0.35)',   /* Red */
+    'rgba(51, 153, 255, 0.35)',  /* Blue */
+    'rgba(255, 204, 0, 0.35)',   /* Gold */
+    'rgba(46, 204, 113, 0.35)',  /* Emerald */
+    'rgba(155, 89, 182, 0.35)',  /* Purple */
+    'rgba(255, 128, 0, 0.35)',   /* Orange */
+    'rgba(0, 230, 230, 0.35)',   /* Cyan */
+    'rgba(255, 105, 180, 0.35)', /* Pink */
+    'rgba(160, 212, 104, 0.35)', /* Lime */
+    'rgba(186, 139, 238, 0.35)', /* Violet */
+    'rgba(241, 196, 15, 0.35)',  /* Amber */
+    'rgba(52, 152, 219, 0.35)'   /* Sky Blue */
 ];
 
 function shuffleArray(array) {
@@ -111,7 +120,7 @@ function generateCages(solvedGrid) {
 
     while (unassigned.length > 0) {
         const start = unassigned.pop();
-        const targetSize = Math.floor(Math.random() * 4) + 2; 
+        const targetSize = Math.floor(Math.random() * 3) + 2; // size 2 to 4
         const cageCells = [start];
         let sum = solvedGrid[start.z][start.y][start.x];
 
@@ -140,20 +149,53 @@ function generateCages(solvedGrid) {
             }
         }
         
-        cageCells.sort((a, b) => {
+        // Guarantee no 1-cell cages: Merge orphan into an adjacent cage
+        if (cageCells.length === 1 && cages.length > 0) {
+            const loneCell = cageCells[0];
+            const offsets = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+            let merged = false;
+            for (const [dz, dy, dx] of offsets) {
+                const nz = loneCell.z + dz, ny = loneCell.y + dy, nx = loneCell.x + dx;
+                const adjCage = cages.find(c => c.cells.some(cell => cell.z === nz && cell.y === ny && cell.x === nx));
+                if (adjCage && adjCage.cells.length < 5) {
+                    adjCage.cells.push(loneCell);
+                    adjCage.sum += solvedGrid[loneCell.z][loneCell.y][loneCell.x];
+                    merged = true;
+                    break;
+                }
+            }
+            if (!merged) {
+                for (const [dz, dy, dx] of offsets) {
+                    const nz = loneCell.z + dz, ny = loneCell.y + dy, nx = loneCell.x + dx;
+                    const adjCage = cages.find(c => c.cells.some(cell => cell.z === nz && cell.y === ny && cell.x === nx));
+                    if (adjCage) {
+                        adjCage.cells.push(loneCell);
+                        adjCage.sum += solvedGrid[loneCell.z][loneCell.y][loneCell.x];
+                        merged = true;
+                        break;
+                    }
+                }
+            }
+        } else {
+            cages.push({
+                id: cageId,
+                cells: cageCells,
+                sum: sum,
+                color: CAGE_COLORS[cageId % CAGE_COLORS.length]
+            });
+            cageId++;
+        }
+    }
+
+    // Sort cells inside each cage
+    for (const cage of cages) {
+        cage.cells.sort((a, b) => {
             if (a.z !== b.z) return a.z - b.z;
             if (a.y !== b.y) return a.y - b.y;
             return a.x - b.x;
         });
-
-        cages.push({
-            id: cageId,
-            cells: cageCells,
-            sum: sum,
-            color: CAGE_COLORS[cageId % CAGE_COLORS.length]
-        });
-        cageId++;
     }
+
     return cages;
 }
 
