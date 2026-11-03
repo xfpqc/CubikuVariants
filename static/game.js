@@ -124,6 +124,7 @@ function generateCages(solvedGrid) {
         const cageCells = [start];
         let sum = solvedGrid[start.z][start.y][start.x];
 
+        // 1. Build normal cages (avoiding duplicates)
         for (let i = 1; i < targetSize; i++) {
             const neighbors = [];
             for (const cell of cageCells) {
@@ -133,7 +134,14 @@ function generateCages(solvedGrid) {
                     if (nz >= 0 && nz < 3 && ny >= 0 && ny < 3 && nx >= 0 && nx < 3) {
                         const idx = unassigned.findIndex(u => u.z === nz && u.y === ny && u.x === nx);
                         if (idx !== -1 && !neighbors.includes(idx)) {
-                            neighbors.push(idx);
+                            
+                            // NEW CHECK: Ensure the adjacent cell doesn't have a number already in the cage
+                            const adjVal = solvedGrid[nz][ny][nx];
+                            const hasDuplicate = cageCells.some(c => solvedGrid[c.z][c.y][c.x] === adjVal);
+                            
+                            if (!hasDuplicate) {
+                                neighbors.push(idx);
+                            }
                         }
                     }
                 }
@@ -149,32 +157,58 @@ function generateCages(solvedGrid) {
             }
         }
         
+        // 2. Handle stranded 1-cell cages
         if (cageCells.length === 1 && cages.length > 0) {
             const loneCell = cageCells[0];
+            const loneVal = solvedGrid[loneCell.z][loneCell.y][loneCell.x];
             const offsets = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
             let merged = false;
+            
+            // Pass A: Try to merge into a small cage (< 5) WITHOUT creating duplicates
             for (const [dz, dy, dx] of offsets) {
                 const nz = loneCell.z + dz, ny = loneCell.y + dy, nx = loneCell.x + dx;
                 const adjCage = cages.find(c => c.cells.some(cell => cell.z === nz && cell.y === ny && cell.x === nx));
+                
                 if (adjCage && adjCage.cells.length < 5) {
-                    adjCage.cells.push(loneCell);
-                    adjCage.sum += solvedGrid[loneCell.z][loneCell.y][loneCell.x];
-                    merged = true;
-                    break;
-                }
-            }
-            if (!merged) {
-                for (const [dz, dy, dx] of offsets) {
-                    const nz = loneCell.z + dz, ny = loneCell.y + dy, nx = loneCell.x + dx;
-                    const adjCage = cages.find(c => c.cells.some(cell => cell.z === nz && cell.y === ny && cell.x === nx));
-                    if (adjCage) {
+                    const hasDuplicate = adjCage.cells.some(c => solvedGrid[c.z][c.y][c.x] === loneVal);
+                    if (!hasDuplicate) {
                         adjCage.cells.push(loneCell);
-                        adjCage.sum += solvedGrid[loneCell.z][loneCell.y][loneCell.x];
+                        adjCage.sum += loneVal;
                         merged = true;
                         break;
                     }
                 }
             }
+            
+            // Pass B: If unmerged, try ANY adjacent cage WITHOUT creating duplicates
+            if (!merged) {
+                for (const [dz, dy, dx] of offsets) {
+                    const nz = loneCell.z + dz, ny = loneCell.y + dy, nx = loneCell.x + dx;
+                    const adjCage = cages.find(c => c.cells.some(cell => cell.z === nz && cell.y === ny && cell.x === nx));
+                    
+                    if (adjCage) {
+                        const hasDuplicate = adjCage.cells.some(c => solvedGrid[c.z][c.y][c.x] === loneVal);
+                        if (!hasDuplicate) {
+                            adjCage.cells.push(loneCell);
+                            adjCage.sum += loneVal;
+                            merged = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // If it STILL couldn't merge safely, leave it as a valid 1-cell cage.
+            if (!merged) {
+                cages.push({
+                    id: cageId,
+                    cells: cageCells,
+                    sum: sum,
+                    color: CAGE_COLORS[cageId % CAGE_COLORS.length]
+                });
+                cageId++;
+            }
+            
         } else {
             cages.push({
                 id: cageId,
@@ -722,7 +756,7 @@ function buildGrids() {
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 3; col++) {
         const cell = document.createElement('div');
-        cell.id          = cellId(z, row, col);
+        cell.id         = cellId(z, row, col);
         cell.className   = 'cell';
         cell.dataset.z   = z;
         cell.dataset.row = row;
