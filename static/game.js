@@ -8,7 +8,7 @@ let cageMap = [];
 
 /* High-contrast, vibrant cage colors */
 const CAGE_COLORS = [
-    'rgba(255, 87, 87, 0.35)',   /* Red */
+    'rgba(255, 87, 87, 0.35)',    /* Red */
     'rgba(51, 153, 255, 0.35)',  /* Blue */
     'rgba(255, 204, 0, 0.35)',   /* Gold */
     'rgba(46, 204, 113, 0.35)',  /* Emerald */
@@ -403,7 +403,7 @@ let state        = emptyGrid();
 let drafts       = emptyDrafts();
 let initialGrid  = emptyGrid(); 
 let solvedGrid   = null;
-let clueSet      = new Set();        
+let clueSet      = new Set();         
 let selected     = null;            
 let undoStack    = [];
 
@@ -829,7 +829,6 @@ function renderState() {
                 for (let i = 1; i <= 9; i++) {
                     const cand = el.querySelector(`.cand-${i}`);
                     if (cand) {
-                        // REPLACED VISIBILITY TOGGLE WITH DISPLAY TOGGLE FOR FLEXBOX SUPPORT
                         if (cellDrafts.has(i)) {
                             cand.classList.add('visible');
                             cand.style.display = 'block';
@@ -1284,13 +1283,16 @@ async function newGame() {
   activeNumber = null;
   updateKeyboardUI();
 
+  // Explicitly wipe drafts clean on new game invocation
+  drafts = emptyDrafts();
+
   await new Promise(resolve => setTimeout(resolve, 50));
 
   try {
     const clues = generateGame();
 
     state = emptyGrid();
-    drafts = emptyDrafts();
+    drafts = emptyDrafts(); // double safe reset
     initialGrid = emptyGrid();
     clueSet = new Set();
     undoStack = [];
