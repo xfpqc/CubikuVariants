@@ -581,6 +581,10 @@ function loadGame() {
     pencilMode = false;
     activeNumber = null;
     
+    document.querySelectorAll('.key-btn').forEach(btn => {
+      btn.classList.remove('control-disabled');
+    });
+
     updateStatsUI(); 
     renderState();
     updateDepletion();
@@ -1285,6 +1289,11 @@ async function newGame() {
   
   pencilMode = false;
   activeNumber = null;
+  
+  document.querySelectorAll('.key-btn').forEach(btn => {
+    btn.classList.remove('control-disabled');
+  });
+
   updateKeyboardUI();
 
   // Explicitly wipe drafts clean on new game invocation
@@ -1419,6 +1428,11 @@ function init() {
           
           pencilMode = false;
           activeNumber = null;
+          
+          document.querySelectorAll('.key-btn').forEach(btn => {
+            btn.classList.remove('control-disabled');
+          });
+
           updateKeyboardUI();
 
           timerSeconds = 0;
