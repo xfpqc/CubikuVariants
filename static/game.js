@@ -1051,7 +1051,23 @@ async function newGame() {
     undoStack = []; timerSeconds = 0; solvedGrid = solved; currentCages = cages;
 
     renderState(); updateDepletion(); startTimer(); saveGame(); 
-    showMessage(`Good luck! Logic Tier: ${currentDifficulty.toUpperCase()}`, "info");
+    
+    const greetings = [
+      "Stay sharp.",
+      "Focus.",
+      "Trust the math.",
+      "Don't let the cages break you.",
+      "Every digit counts.",
+      "Think outside the slice.",
+      "Watch your Z-axis.",
+      "Cross-plane logic required.",
+      "Good luck!",
+      "👀",
+      "😱"
+    ];
+    const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+    showMessage(randomGreeting, "info");
+    
   } catch (err) {
     showMessage(`Failed to load puzzle: ${err.message}`, 'error');
   } finally { setLoading(false); }

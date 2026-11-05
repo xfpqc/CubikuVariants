@@ -1,10 +1,10 @@
-const CACHE_NAME = 'cubiku-variants-v79';
+const CACHE_NAME = 'cubiku-variants-v80';
 
 const ASSETS = [
   './',
   './index.html',
-  './static/style.css?v=79',
-  './static/game.js?v=79',
+  './static/style.css?v=80',
+  './static/game.js?v=80',
   './static/icon-512.png',
   './static/manifest.json'
 ];
