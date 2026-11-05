@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="./static/style.css?v=78" />
+  <link rel="stylesheet" href="./static/style.css?v=79" />
   <link rel="manifest" href="./static/manifest.json" />
   
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -81,6 +81,18 @@
             </svg>
           </div>
           <div class="setting-divider"></div>
+          
+          <div class="setting-item">
+            <span>Difficulty</span>
+            <div class="select-wrapper">
+              <select id="difficulty-select">
+                <option value="easy">Easy</option>
+                <option value="medium" selected>Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </div>
+          </div>
+
           <div class="setting-item">
             <span>Accent</span>
             <div class="select-wrapper">
@@ -186,6 +198,6 @@
     }
   </script>
   
-  <script src="./static/game.js?v=78"></script>
+  <script src="./static/game.js?v=79"></script>
 </body>
 </html>
