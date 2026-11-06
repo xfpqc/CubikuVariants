@@ -426,12 +426,15 @@ async function generateGame(targetDiff = currentDifficulty) {
         generateSolvedGrid(grid, 3, 'standard');
         const candidateCages = generateCages(grid, targetDiff);
         
-        // Define givens/clues strictly for Easy mode
+        // Define givens/clues strictly for Easy and Medium mode
         const initialG = emptyGrid();
         const clues = [];
+        let numClues = 0;
         
-        if (targetDiff === 'easy') {
-            const numClues = Math.floor(Math.random() * 3) + 4; // 4 to 6 clues
+        if (targetDiff === 'easy') numClues = Math.floor(Math.random() * 3) + 4; // 4 to 6 clues
+        else if (targetDiff === 'medium') numClues = Math.floor(Math.random() * 2) + 2; // 2 to 3 clues
+        
+        if (numClues > 0) {
             const allCells = [];
             for(let z=0; z<3; z++) for(let y=0; y<3; y++) for(let x=0; x<3; x++) allCells.push({z,y,x});
             shuffleArray(allCells);
@@ -463,12 +466,16 @@ async function generateGame(targetDiff = currentDifficulty) {
     
     const fallbackInitG = emptyGrid();
     const fallbackClues = [];
-    if (targetDiff === 'easy') {
-        const numClues = 5;
+    let fallbackNumClues = 0;
+    
+    if (targetDiff === 'easy') fallbackNumClues = 5;
+    else if (targetDiff === 'medium') fallbackNumClues = 2;
+
+    if (fallbackNumClues > 0) {
         const allCells = [];
         for(let z=0; z<3; z++) for(let y=0; y<3; y++) for(let x=0; x<3; x++) allCells.push({z,y,x});
         shuffleArray(allCells);
-        for(let i=0; i<numClues; i++) {
+        for(let i=0; i<fallbackNumClues; i++) {
             const c = allCells[i];
             fallbackInitG[c.z][c.y][c.x] = fallbackGrid[c.z][c.y][c.x];
             fallbackClues.push(`${c.z},${c.y},${c.x}`);
@@ -1234,10 +1241,10 @@ async function newGame() {
     renderState(); updateDepletion(); startTimer(); saveGame(); 
     
     const greetings = [
-      "Stay sharp.", "Focus.", "Trust the math.", 
-      "Don't let the cages break you.", "Every digit counts.", 
-      "Think outside the slice.", "Watch your Z-axis.", 
-      "Cross-plane logic required.", "Good luck!", "👀", "😱"
+      "Calculations ready.", "Find the anchor.", "Trust the math.", 
+      "Break the cages.", "Every deduction counts.", 
+      "Scan the intersections.", "Watch your Z-axis.", 
+      "Cross-plane logic required.", "Logic dictates.", "Stay sharp."
     ];
     showMessage(greetings[Math.floor(Math.random() * greetings.length)], "info");
     
