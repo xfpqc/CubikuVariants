@@ -1,5 +1,5 @@
 /**
- * Cubiku Variants v61 — Killer 3D Sudoku (Heuristic Logic Engine)
+ * Cubiku Variants v62 — Killer 3D Sudoku (Heuristic Logic Engine + Background Cache)
  */
 
 let currentVariant = "killer";
@@ -184,9 +184,6 @@ function solveLogically(cagesTest) {
 
     let progress = true;
     let maxTier = 0;
-    
-    // Helper to count bits for Naked Pairs
-    const bitCount = (n) => { let c = 0; while (n) { n &= n - 1; c++; } return c; };
 
     function placeDigit(z, y, x, d) {
         if (grid[z][y][x] !== 0) return grid[z][y][x] === d;
@@ -200,20 +197,18 @@ function solveLogically(cagesTest) {
         return true;
     }
 
-    // Build Planar and Volumetric Regions (45 and 90 rules)
     const regions = [];
     for(let z=0; z<3; z++) { let r=[]; for(let y=0; y<3; y++) for(let x=0; x<3; x++) r.push({z,y,x}); regions.push({target: 45, cells: r}); }
     for(let y=0; y<3; y++) { let r=[]; for(let z=0; z<3; z++) for(let x=0; x<3; x++) r.push({z,y,x}); regions.push({target: 45, cells: r}); }
     for(let x=0; x<3; x++) { let r=[]; for(let z=0; z<3; z++) for(let y=0; y<3; y++) r.push({z,y,x}); regions.push({target: 45, cells: r}); }
     
-    // Double Planes (Volumetric 90)
     regions.push({target: 90, cells: [...regions[0].cells, ...regions[1].cells]});
     regions.push({target: 90, cells: [...regions[1].cells, ...regions[2].cells]});
 
     while (progress) {
         progress = false;
 
-        // Tier 0: Naked Singles
+        // TIER 0: Naked Singles
         for (let z = 0; z < 3; z++) for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) {
             if (grid[z][y][x] === 0) {
                 let mask = cands[z][y][x];
@@ -227,7 +222,7 @@ function solveLogically(cagesTest) {
         }
         if (progress) { maxTier = Math.max(maxTier, 0); continue; }
 
-        // Tier 0: Cage Combinations
+        // TIER 0: Cage Combinations
         for (const cage of cagesTest) {
             let currentSum = 0;
             let emptyCells = [];
@@ -259,18 +254,83 @@ function solveLogically(cagesTest) {
         }
         if (progress) { maxTier = Math.max(maxTier, 0); continue; }
 
-        // Tier 1: Planar 45 and Volumetric 90 (Innies and Outies)
+        // TIER 0: Hidden Singles (Axes)
+        for (let d = 1; d <= 9; d++) {
+            const mask = 1 << (d - 1);
+            for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) {
+                let count = 0, targetZ = -1;
+                for (let z = 0; z < 3; z++) if (grid[z][y][x] === 0 && (cands[z][y][x] & mask)) { count++; targetZ = z; }
+                if (count === 1 && placeDigit(targetZ, y, x, d)) progress = true;
+            }
+            for (let z = 0; z < 3; z++) for (let x = 0; x < 3; x++) {
+                let count = 0, targetY = -1;
+                for (let y = 0; y < 3; y++) if (grid[z][y][x] === 0 && (cands[z][y][x] & mask)) { count++; targetY = y; }
+                if (count === 1 && placeDigit(z, targetY, x, d)) progress = true;
+            }
+            for (let z = 0; z < 3; z++) for (let y = 0; y < 3; y++) {
+                let count = 0, targetX = -1;
+                for (let x = 0; x < 3; x++) if (grid[z][y][x] === 0 && (cands[z][y][x] & mask)) { count++; targetX = x; }
+                if (count === 1 && placeDigit(z, y, targetX, d)) progress = true;
+            }
+        }
+        if (progress) { maxTier = Math.max(maxTier, 0); continue; }
+
+        // TIER 1: Pointing Digits (Cage limits candidate to a single axis)
+        for (const cage of cagesTest) {
+            let emptyCells = cage.cells.filter(c => grid[c.z][c.y][c.x] === 0);
+            if (emptyCells.length < 2) continue;
+
+            for (let d = 1; d <= 9; d++) {
+                const mask = 1 << (d - 1);
+                const cellsWithD = emptyCells.filter(c => (cands[c.z][c.y][c.x] & mask));
+                if (cellsWithD.length > 1) {
+                    const shareZ = cellsWithD.every(c => c.z === cellsWithD[0].z);
+                    const shareY = cellsWithD.every(c => c.y === cellsWithD[0].y);
+                    const shareX = cellsWithD.every(c => c.x === cellsWithD[0].x);
+
+                    if (shareZ && shareY) { // Shared X-axis row
+                        for (let x = 0; x < 3; x++) {
+                            if (!cellsWithD.some(c => c.x === x) && grid[cellsWithD[0].z][cellsWithD[0].y][x] === 0) {
+                                if (cands[cellsWithD[0].z][cellsWithD[0].y][x] & mask) {
+                                    cands[cellsWithD[0].z][cellsWithD[0].y][x] &= ~mask;
+                                    progress = true;
+                                }
+                            }
+                        }
+                    }
+                    if (shareZ && shareX) { // Shared Y-axis column
+                        for (let y = 0; y < 3; y++) {
+                            if (!cellsWithD.some(c => c.y === y) && grid[cellsWithD[0].z][y][cellsWithD[0].x] === 0) {
+                                if (cands[cellsWithD[0].z][y][cellsWithD[0].x] & mask) {
+                                    cands[cellsWithD[0].z][y][cellsWithD[0].x] &= ~mask;
+                                    progress = true;
+                                }
+                            }
+                        }
+                    }
+                    if (shareY && shareX) { // Shared Z-axis pillar
+                        for (let z = 0; z < 3; z++) {
+                            if (!cellsWithD.some(c => c.z === z) && grid[z][cellsWithD[0].y][cellsWithD[0].x] === 0) {
+                                if (cands[z][cellsWithD[0].y][cellsWithD[0].x] & mask) {
+                                    cands[z][cellsWithD[0].y][cellsWithD[0].x] &= ~mask;
+                                    progress = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (progress) { maxTier = Math.max(maxTier, 1); continue; }
+
+        // TIER 2: Planar 45 and Volumetric 90 (Innies and Outies)
         for (const region of regions) {
-            // Find intersecting cages
             const intersectingCages = [];
             const regionStrs = new Set(region.cells.map(c => `${c.z},${c.y},${c.x}`));
             for (const cage of cagesTest) {
-                if (cage.cells.some(c => regionStrs.has(`${c.z},${c.y},${c.x}`))) {
-                    intersectingCages.push(cage);
-                }
+                if (cage.cells.some(c => regionStrs.has(`${c.z},${c.y},${c.x}`))) intersectingCages.push(cage);
             }
             
-            // Limit combinatorial explosion on messy geometry
             if (intersectingCages.length > 12) continue; 
             
             for (let i = 1; i < (1 << intersectingCages.length); i++) {
@@ -287,7 +347,6 @@ function solveLogically(cagesTest) {
                     }
                 }
                 
-                // Outie = 1 cell outside region. Innie = 1 cell missing inside region
                 if (subSum < region.target - 9 || subSum > region.target + 9) continue;
 
                 const innies = region.cells.filter(c => !subStrs.has(`${c.z},${c.y},${c.x}`));
@@ -311,107 +370,6 @@ function solveLogically(cagesTest) {
             if (progress) break;
         }
         
-        if (progress) { maxTier = Math.max(maxTier, 1); continue; }
-
-        // Tier 2: Hidden Singles (across Z, Y, X axes)
-        for (let d = 1; d <= 9; d++) {
-            const mask = 1 << (d - 1);
-            // Z-axis (Pillars)
-            for (let y = 0; y < 3; y++) {
-                for (let x = 0; x < 3; x++) {
-                    let count = 0, targetZ = -1;
-                    for (let z = 0; z < 3; z++) {
-                        if (grid[z][y][x] === 0 && (cands[z][y][x] & mask)) { count++; targetZ = z; }
-                    }
-                    if (count === 1 && placeDigit(targetZ, y, x, d)) progress = true;
-                }
-            }
-            // Y-axis (Columns)
-            for (let z = 0; z < 3; z++) {
-                for (let x = 0; x < 3; x++) {
-                    let count = 0, targetY = -1;
-                    for (let y = 0; y < 3; y++) {
-                        if (grid[z][y][x] === 0 && (cands[z][y][x] & mask)) { count++; targetY = y; }
-                    }
-                    if (count === 1 && placeDigit(z, targetY, x, d)) progress = true;
-                }
-            }
-            // X-axis (Rows)
-            for (let z = 0; z < 3; z++) {
-                for (let y = 0; y < 3; y++) {
-                    let count = 0, targetX = -1;
-                    for (let x = 0; x < 3; x++) {
-                        if (grid[z][y][x] === 0 && (cands[z][y][x] & mask)) { count++; targetX = x; }
-                    }
-                    if (count === 1 && placeDigit(z, y, targetX, d)) progress = true;
-                }
-            }
-        }
-        if (progress) { maxTier = Math.max(maxTier, 2); continue; }
-
-        // Tier 2: Naked Pairs in Lines
-        // Because lines are length 3, if 2 cells have exactly 2 candidates and they match, the 3rd cell loses them.
-        
-        // Z-axis
-        for (let y = 0; y < 3; y++) {
-            for (let x = 0; x < 3; x++) {
-                for(let z1=0; z1<3; z1++) {
-                    for(let z2=z1+1; z2<3; z2++) {
-                        if(grid[z1][y][x] === 0 && grid[z2][y][x] === 0) {
-                            let c1 = cands[z1][y][x], c2 = cands[z2][y][x];
-                            if (c1 === c2 && bitCount(c1) === 2) {
-                                let z3 = 3 - z1 - z2;
-                                if (grid[z3][y][x] === 0) {
-                                    let oldMask = cands[z3][y][x];
-                                    let newMask = oldMask & ~c1;
-                                    if (newMask !== oldMask) { cands[z3][y][x] = newMask; progress = true; }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        // Y-axis
-        for (let z = 0; z < 3; z++) {
-            for (let x = 0; x < 3; x++) {
-                for(let y1=0; y1<3; y1++) {
-                    for(let y2=y1+1; y2<3; y2++) {
-                        if(grid[z][y1][x] === 0 && grid[z][y2][x] === 0) {
-                            let c1 = cands[z][y1][x], c2 = cands[z][y2][x];
-                            if (c1 === c2 && bitCount(c1) === 2) {
-                                let y3 = 3 - y1 - y2;
-                                if (grid[z][y3][x] === 0) {
-                                    let oldMask = cands[z][y3][x];
-                                    let newMask = oldMask & ~c1;
-                                    if (newMask !== oldMask) { cands[z][y3][x] = newMask; progress = true; }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        // X-axis
-        for (let z = 0; z < 3; z++) {
-            for (let y = 0; y < 3; y++) {
-                for(let x1=0; x1<3; x1++) {
-                    for(let x2=x1+1; x2<3; x2++) {
-                        if(grid[z][y][x1] === 0 && grid[z][y][x2] === 0) {
-                            let c1 = cands[z][y][x1], c2 = cands[z][y][x2];
-                            if (c1 === c2 && bitCount(c1) === 2) {
-                                let x3 = 3 - x1 - x2;
-                                if (grid[z][y][x3] === 0) {
-                                    let oldMask = cands[z][y][x3];
-                                    let newMask = oldMask & ~c1;
-                                    if (newMask !== oldMask) { cands[z][y][x3] = newMask; progress = true; }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
         if (progress) { maxTier = Math.max(maxTier, 2); continue; }
     }
 
@@ -427,12 +385,19 @@ function yieldToMain() {
     return new Promise(resolve => setTimeout(resolve, 0));
 }
 
+function buildCageMap(cages) {
+    const map = emptyGrid();
+    for (const cage of cages) {
+        for (const cell of cage.cells) map[cell.z][cell.y][cell.x] = cage;
+    }
+    return map;
+}
+
 async function generateGame(targetDiff = currentDifficulty) {
     let attempts = 0;
     const diffMap = { 0: 'easy', 1: 'medium', 2: 'hard' };
 
-    // Significantly higher limit since strict matching is enforced and UI won't freeze
-    while (attempts < 2500) {
+    while (attempts < 3000) {
         attempts++;
         if (attempts % 10 === 0) await yieldToMain();
 
@@ -445,28 +410,60 @@ async function generateGame(targetDiff = currentDifficulty) {
         if (logicResult.solved) {
             const mappedDiff = diffMap[logicResult.maxTier] || 'hard';
             
-            // STRICT MATCHING: Force generator to find exactly the target difficulty
             if (mappedDiff === targetDiff) {
-                console.log(`Board generated in ${attempts} attempts. Difficulty: ${mappedDiff}`);
-                cageMap = emptyGrid();
-                for (const cage of candidateCages) {
-                    for (const cell of cage.cells) cageMap[cell.z][cell.y][cell.x] = cage;
-                }
-                return { clues: [], solvedGrid: grid, cages: candidateCages };
+                const generatedMap = buildCageMap(candidateCages);
+                return { clues: [], solvedGrid: grid, cages: candidateCages, map: generatedMap };
             }
         }
     }
     
-    // Emergency Fallback ONLY if all 2500 attempts fail 
     console.warn(`Could not strictly match ${targetDiff} logic. Returning best-effort fallback.`);
     const fallbackGrid = emptyGrid();
     generateSolvedGrid(fallbackGrid, 3, 'standard');
     const fallbackCages = generateCages(fallbackGrid);
-    cageMap = emptyGrid();
-    for (const cage of fallbackCages) {
-        for (const cell of cage.cells) cageMap[cell.z][cell.y][cell.x] = cage;
+    const fallbackMap = buildCageMap(fallbackCages);
+    
+    return { clues: [], solvedGrid: fallbackGrid, cages: fallbackCages, map: fallbackMap };
+}
+
+// ---------------------------------------------------------
+// BACKGROUND CACHING SYSTEM
+// ---------------------------------------------------------
+let boardCache = { easy: [], medium: [], hard: [] };
+let isCaching = false;
+
+function saveCache() {
+    localStorage.setItem('cubiku_killer_cache', JSON.stringify(boardCache));
+}
+
+function loadCache() {
+    const saved = localStorage.getItem('cubiku_killer_cache');
+    if (saved) {
+        try { 
+            boardCache = JSON.parse(saved); 
+            if (!boardCache.easy) boardCache = { easy: [], medium: [], hard: [] };
+        } catch(e) { 
+            boardCache = { easy: [], medium: [], hard: [] }; 
+        }
     }
-    return { clues: [], solvedGrid: fallbackGrid, cages: fallbackCages };
+}
+
+async function maintainCache() {
+    if (isCaching) return;
+    isCaching = true;
+    const diffs = ['easy', 'medium', 'hard'];
+    
+    for (const diff of diffs) {
+        while (boardCache[diff].length < 2) {
+            console.log(`[Cache] Generating backup for ${diff}...`);
+            const puzzle = await generateGame(diff);
+            boardCache[diff].push(puzzle);
+            saveCache();
+            console.log(`[Cache] Cached ${diff}. Total: ${boardCache[diff].length}`);
+            await yieldToMain(); 
+        }
+    }
+    isCaching = false;
 }
 
 // ---------------------------------------------------------
@@ -1151,28 +1148,37 @@ async function newGame() {
   updateKeyboardUI(); drafts = emptyDrafts();
 
   try {
-    const { clues, solvedGrid: solved, cages } = await generateGame();
+    let puzzle;
     
-    state = emptyGrid(); drafts = emptyDrafts(); initialGrid = emptyGrid(); clueSet = new Set();
+    // CACHE HIT: Instant load from localStorage array
+    if (boardCache[currentDifficulty] && boardCache[currentDifficulty].length > 0) {
+        console.log(`[Cache] Loading ${currentDifficulty} from backup array.`);
+        puzzle = boardCache[currentDifficulty].shift();
+        saveCache(); 
+    } else {
+        // CACHE MISS: Wait for generator (Only happens on very first load or if playing too fast)
+        console.log(`[Cache Miss] Generating ${currentDifficulty} on the fly...`);
+        puzzle = await generateGame(currentDifficulty);
+    }
+    
+    const { clues, solvedGrid: solved, cages, map } = puzzle;
+    
+    state = emptyGrid(); drafts = emptyDrafts(); initialGrid = emptyGrid(); clueSet = new Set(clues);
     undoStack = []; timerSeconds = 0; solvedGrid = solved; currentCages = cages;
+    cageMap = map || buildCageMap(cages);
 
     renderState(); updateDepletion(); startTimer(); saveGame(); 
     
     const greetings = [
-      "Stay sharp.",
-      "Focus.",
-      "Trust the math.",
-      "Don't let the cages break you.",
-      "Every digit counts.",
-      "Think outside the slice.",
-      "Watch your Z-axis.",
-      "Cross-plane logic required.",
-      "Good luck!",
-      "👀",
-      "😱"
+      "Stay sharp.", "Focus.", "Trust the math.", 
+      "Don't let the cages break you.", "Every digit counts.", 
+      "Think outside the slice.", "Watch your Z-axis.", 
+      "Cross-plane logic required.", "Good luck!", "👀", "😱"
     ];
-    const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
-    showMessage(randomGreeting, "info");
+    showMessage(greetings[Math.floor(Math.random() * greetings.length)], "info");
+    
+    // FIRE AND FORGET: Trigger the cache restock loop in the background
+    setTimeout(maintainCache, 500);
     
   } catch (err) {
     showMessage(`Failed to load puzzle: ${err.message}`, 'error');
@@ -1218,7 +1224,7 @@ function repairDOM() {
 }
 
 function init() {
-  repairDOM(); buildGrids(); loadPreferences(); loadStats();
+  repairDOM(); buildGrids(); loadPreferences(); loadStats(); loadCache();
   
   const btnNew = document.getElementById('btn-new-game'); if (btnNew) btnNew.addEventListener('click', newGame);
   const btnMenu = document.getElementById('btn-menu'); if (btnMenu) btnMenu.addEventListener('click', toggleMenu);
@@ -1234,7 +1240,13 @@ function init() {
 
   const btnZen = document.getElementById('btn-zen'); if (btnZen) btnZen.addEventListener('click', toggleZen);
   const btnSettingsReset = document.getElementById('btn-settings-reset-stats'); if (btnSettingsReset) btnSettingsReset.addEventListener('click', (e) => { e.stopPropagation(); resetStats(); });
-  const themeSelect = document.getElementById('theme-select'); if (themeSelect) themeSelect.addEventListener('change', (e) => { currentTheme = e.target.value; document.body.setAttribute('data-theme', currentTheme); updateNumberHighlights(); savePreferences(); });
+  const themeSelect = document.getElementById('theme-select'); if (themeSelect) themeSelect.addEventListener('change', (e) => { 
+      currentDifficulty = e.target.value; 
+      updateStatsUI(); 
+      savePreferences(); 
+      // User changed difficulty, kick off a cache check just in case it's empty
+      maintainCache();
+  });
   const diffSelect = document.getElementById('difficulty-select'); if (diffSelect) diffSelect.addEventListener('change', (e) => { currentDifficulty = e.target.value; updateStatsUI(); savePreferences(); });
   const toggleSticky = document.getElementById('toggle-sticky-keys'); if (toggleSticky) toggleSticky.addEventListener('change', (e) => { stickyKeysEnabled = e.target.checked; savePreferences(); });
 
@@ -1253,6 +1265,7 @@ function init() {
   });
 
   if (!loadGame()) newGame();
+  else setTimeout(maintainCache, 1000); // If game loaded from save, start caching in background anyway
 }
 
 document.addEventListener('DOMContentLoaded', () => init());
