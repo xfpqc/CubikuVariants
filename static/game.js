@@ -6,22 +6,21 @@ let currentVariant = "killer";
 let currentCages = [];
 let cageMap = [];
 
-/* High-contrast, vibrant cage colors */
+/* High-contrast, vibrant cage colors with maximum hue separation */
 const CAGE_COLORS = [
-    'rgba(255, 87, 87, 0.35)',    /* Red */
-    'rgba(51, 153, 255, 0.35)',  /* Blue */
-    'rgba(255, 204, 0, 0.35)',   /* Gold */
-    'rgba(46, 204, 113, 0.35)',  /* Emerald */
-    'rgba(155, 89, 182, 0.35)',  /* Purple */
-    'rgba(255, 128, 0, 0.35)',   /* Orange */
-    'rgba(0, 230, 230, 0.35)',   /* Cyan */
-    'rgba(255, 105, 180, 0.35)', /* Pink */
-    'rgba(160, 212, 104, 0.35)', /* Lime */
-    'rgba(186, 139, 238, 0.35)', /* Violet */
-    'rgba(241, 196, 15, 0.35)',  /* Amber */
-    'rgba(52, 152, 219, 0.35)'   /* Sky Blue */
+    'rgba(255, 75, 75, 0.35)',    /* Vivid Red */
+    'rgba(255, 140, 0, 0.35)',    /* Deep Orange */
+    'rgba(255, 215, 0, 0.35)',    /* True Yellow / Gold */
+    'rgba(50, 215, 75, 0.35)',    /* Bright Mint Green */
+    'rgba(0, 200, 150, 0.35)',    /* Teal / Seafoam */
+    'rgba(0, 150, 255, 0.35)',    /* Royal Blue */
+    'rgba(140, 100, 255, 0.35)',  /* Indigo / Periwinkle */
+    'rgba(215, 80, 255, 0.35)',   /* Orchid Purple */
+    'rgba(255, 105, 180, 0.35)',  /* Hot Pink */
+    'rgba(139, 69, 19, 0.35)',    /* Warm Saddle Brown */
+    'rgba(112, 128, 144, 0.35)',  /* Slate Grey */
+    'rgba(0, 225, 225, 0.35)'     /* Electric Cyan */
 ];
-
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
