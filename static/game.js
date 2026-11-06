@@ -184,6 +184,9 @@ function solveLogically(cagesTest) {
 
     let progress = true;
     let maxTier = 0;
+    
+    // Helper to count bits for Naked Pairs
+    const bitCount = (n) => { let c = 0; while (n) { n &= n - 1; c++; } return c; };
 
     function placeDigit(z, y, x, d) {
         if (grid[z][y][x] !== 0) return grid[z][y][x] === d;
@@ -256,7 +259,7 @@ function solveLogically(cagesTest) {
         }
         if (progress) { maxTier = Math.max(maxTier, 0); continue; }
 
-        // Tier 1 & 2: Planar 45 and Volumetric 90 (Innies and Outies)
+        // Tier 1: Planar 45 and Volumetric 90 (Innies and Outies)
         for (const region of regions) {
             // Find intersecting cages
             const intersectingCages = [];
@@ -309,6 +312,107 @@ function solveLogically(cagesTest) {
         }
         
         if (progress) { maxTier = Math.max(maxTier, 1); continue; }
+
+        // Tier 2: Hidden Singles (across Z, Y, X axes)
+        for (let d = 1; d <= 9; d++) {
+            const mask = 1 << (d - 1);
+            // Z-axis (Pillars)
+            for (let y = 0; y < 3; y++) {
+                for (let x = 0; x < 3; x++) {
+                    let count = 0, targetZ = -1;
+                    for (let z = 0; z < 3; z++) {
+                        if (grid[z][y][x] === 0 && (cands[z][y][x] & mask)) { count++; targetZ = z; }
+                    }
+                    if (count === 1 && placeDigit(targetZ, y, x, d)) progress = true;
+                }
+            }
+            // Y-axis (Columns)
+            for (let z = 0; z < 3; z++) {
+                for (let x = 0; x < 3; x++) {
+                    let count = 0, targetY = -1;
+                    for (let y = 0; y < 3; y++) {
+                        if (grid[z][y][x] === 0 && (cands[z][y][x] & mask)) { count++; targetY = y; }
+                    }
+                    if (count === 1 && placeDigit(z, targetY, x, d)) progress = true;
+                }
+            }
+            // X-axis (Rows)
+            for (let z = 0; z < 3; z++) {
+                for (let y = 0; y < 3; y++) {
+                    let count = 0, targetX = -1;
+                    for (let x = 0; x < 3; x++) {
+                        if (grid[z][y][x] === 0 && (cands[z][y][x] & mask)) { count++; targetX = x; }
+                    }
+                    if (count === 1 && placeDigit(z, y, targetX, d)) progress = true;
+                }
+            }
+        }
+        if (progress) { maxTier = Math.max(maxTier, 2); continue; }
+
+        // Tier 2: Naked Pairs in Lines
+        // Because lines are length 3, if 2 cells have exactly 2 candidates and they match, the 3rd cell loses them.
+        
+        // Z-axis
+        for (let y = 0; y < 3; y++) {
+            for (let x = 0; x < 3; x++) {
+                for(let z1=0; z1<3; z1++) {
+                    for(let z2=z1+1; z2<3; z2++) {
+                        if(grid[z1][y][x] === 0 && grid[z2][y][x] === 0) {
+                            let c1 = cands[z1][y][x], c2 = cands[z2][y][x];
+                            if (c1 === c2 && bitCount(c1) === 2) {
+                                let z3 = 3 - z1 - z2;
+                                if (grid[z3][y][x] === 0) {
+                                    let oldMask = cands[z3][y][x];
+                                    let newMask = oldMask & ~c1;
+                                    if (newMask !== oldMask) { cands[z3][y][x] = newMask; progress = true; }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Y-axis
+        for (let z = 0; z < 3; z++) {
+            for (let x = 0; x < 3; x++) {
+                for(let y1=0; y1<3; y1++) {
+                    for(let y2=y1+1; y2<3; y2++) {
+                        if(grid[z][y1][x] === 0 && grid[z][y2][x] === 0) {
+                            let c1 = cands[z][y1][x], c2 = cands[z][y2][x];
+                            if (c1 === c2 && bitCount(c1) === 2) {
+                                let y3 = 3 - y1 - y2;
+                                if (grid[z][y3][x] === 0) {
+                                    let oldMask = cands[z][y3][x];
+                                    let newMask = oldMask & ~c1;
+                                    if (newMask !== oldMask) { cands[z][y3][x] = newMask; progress = true; }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // X-axis
+        for (let z = 0; z < 3; z++) {
+            for (let y = 0; y < 3; y++) {
+                for(let x1=0; x1<3; x1++) {
+                    for(let x2=x1+1; x2<3; x2++) {
+                        if(grid[z][y][x1] === 0 && grid[z][y][x2] === 0) {
+                            let c1 = cands[z][y][x1], c2 = cands[z][y][x2];
+                            if (c1 === c2 && bitCount(c1) === 2) {
+                                let x3 = 3 - x1 - x2;
+                                if (grid[z][y][x3] === 0) {
+                                    let oldMask = cands[z][y][x3];
+                                    let newMask = oldMask & ~c1;
+                                    if (newMask !== oldMask) { cands[z][y][x3] = newMask; progress = true; }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (progress) { maxTier = Math.max(maxTier, 2); continue; }
     }
 
     let isSolved = true;
@@ -327,9 +431,10 @@ async function generateGame(targetDiff = currentDifficulty) {
     let attempts = 0;
     const diffMap = { 0: 'easy', 1: 'medium', 2: 'hard' };
 
-    while (attempts < 250) {
+    // Significantly higher limit since strict matching is enforced and UI won't freeze
+    while (attempts < 2500) {
         attempts++;
-        if (attempts % 5 === 0) await yieldToMain();
+        if (attempts % 10 === 0) await yieldToMain();
 
         const grid = emptyGrid();
         generateSolvedGrid(grid, 3, 'standard');
@@ -339,8 +444,9 @@ async function generateGame(targetDiff = currentDifficulty) {
 
         if (logicResult.solved) {
             const mappedDiff = diffMap[logicResult.maxTier] || 'hard';
-            // Return exactly if it hits target difficulty, OR if we're taking too long, return whatever we found.
-            if (mappedDiff === targetDiff || attempts > 150) {
+            
+            // STRICT MATCHING: Force generator to find exactly the target difficulty
+            if (mappedDiff === targetDiff) {
                 console.log(`Board generated in ${attempts} attempts. Difficulty: ${mappedDiff}`);
                 cageMap = emptyGrid();
                 for (const cage of candidateCages) {
@@ -351,8 +457,8 @@ async function generateGame(targetDiff = currentDifficulty) {
         }
     }
     
-    // Emergency Fallback if the engine generates chaotic geometry constantly
-    console.warn("Could not meet logical constraints. Returning safe fallback.");
+    // Emergency Fallback ONLY if all 2500 attempts fail 
+    console.warn(`Could not strictly match ${targetDiff} logic. Returning best-effort fallback.`);
     const fallbackGrid = emptyGrid();
     generateSolvedGrid(fallbackGrid, 3, 'standard');
     const fallbackCages = generateCages(fallbackGrid);
