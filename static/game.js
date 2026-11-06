@@ -1,5 +1,5 @@
 /**
- * Cubiku Variants v62 — Killer 3D Sudoku (Heuristic Logic Engine + Background Cache)
+ * Cubiku Variants v62 — Killer 3D Sudoku (Heuristic Logic Engine + Background Cache + Givens)
  */
 
 let currentVariant = "killer";
@@ -67,7 +67,7 @@ function generateSolvedGrid(grid, n = 3, variant = 'standard') {
   return true;
 }
 
-function generateCages(solvedGrid) {
+function generateCages(solvedGrid, difficulty = 'medium') {
     const cages = [];
     const unassigned = [];
     for (let z = 0; z < 3; z++)
@@ -80,7 +80,13 @@ function generateCages(solvedGrid) {
 
     while (unassigned.length > 0) {
         const start = unassigned.pop();
-        const targetSize = Math.floor(Math.random() * 3) + 2; 
+        
+        // Dynamic cage sizes based on difficulty for better cognitive load balancing
+        let targetSize;
+        if (difficulty === 'easy') targetSize = Math.floor(Math.random() * 2) + 2; // 2 to 3 cells
+        else if (difficulty === 'hard') targetSize = Math.floor(Math.random() * 3) + 3; // 3 to 5 cells
+        else targetSize = Math.floor(Math.random() * 3) + 2; // 2 to 4 cells
+
         const cageCells = [start];
         let sum = solvedGrid[start.z][start.y][start.x];
 
@@ -117,10 +123,12 @@ function generateCages(solvedGrid) {
             const offsets = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
             let merged = false;
             
+            const maxSize = difficulty === 'hard' ? 5 : (difficulty === 'easy' ? 3 : 4);
+            
             for (const [dz, dy, dx] of offsets) {
                 const nz = loneCell.z + dz, ny = loneCell.y + dy, nx = loneCell.x + dx;
                 const adjCage = cages.find(c => c.cells.some(cell => cell.z === nz && cell.y === ny && cell.x === nx));
-                if (adjCage && adjCage.cells.length < 5) {
+                if (adjCage && adjCage.cells.length < maxSize) {
                     const hasDuplicate = adjCage.cells.some(c => solvedGrid[c.z][c.y][c.x] === loneVal);
                     if (!hasDuplicate) {
                         adjCage.cells.push(loneCell);
@@ -177,7 +185,7 @@ function getCombos(targetSum, numCells, excludeDigits = []) {
     return results;
 }
 
-function solveLogically(cagesTest) {
+function solveLogically(cagesTest, initialClues = null) {
     const grid = emptyGrid();
     const cands = emptyGrid();
     for (let z = 0; z < 3; z++) for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) cands[z][y][x] = (1 << 9) - 1; // 511
@@ -195,6 +203,19 @@ function solveLogically(cagesTest) {
             cands[i][j][x] &= ~(1 << (d - 1));
         }
         return true;
+    }
+
+    // Embed provided givens/clues before evaluating logic
+    if (initialClues) {
+        for (let z = 0; z < 3; z++) {
+            for (let y = 0; y < 3; y++) {
+                for (let x = 0; x < 3; x++) {
+                    if (initialClues[z][y][x] !== 0) {
+                        if (!placeDigit(z, y, x, initialClues[z][y][x])) return { solved: false };
+                    }
+                }
+            }
+        }
     }
 
     const regions = [];
@@ -403,16 +424,33 @@ async function generateGame(targetDiff = currentDifficulty) {
 
         const grid = emptyGrid();
         generateSolvedGrid(grid, 3, 'standard');
-        const candidateCages = generateCages(grid);
+        const candidateCages = generateCages(grid, targetDiff);
         
-        const logicResult = solveLogically(candidateCages);
+        // Define givens/clues strictly for Easy mode
+        const initialG = emptyGrid();
+        const clues = [];
+        
+        if (targetDiff === 'easy') {
+            const numClues = Math.floor(Math.random() * 3) + 4; // 4 to 6 clues
+            const allCells = [];
+            for(let z=0; z<3; z++) for(let y=0; y<3; y++) for(let x=0; x<3; x++) allCells.push({z,y,x});
+            shuffleArray(allCells);
+            for(let i=0; i<numClues; i++) {
+                const c = allCells[i];
+                initialG[c.z][c.y][c.x] = grid[c.z][c.y][c.x];
+                clues.push(`${c.z},${c.y},${c.x}`);
+            }
+        }
+        
+        // Supply initial clues to the solver logic
+        const logicResult = solveLogically(candidateCages, initialG);
 
         if (logicResult.solved) {
             const mappedDiff = diffMap[logicResult.maxTier] || 'hard';
             
             if (mappedDiff === targetDiff) {
                 const generatedMap = buildCageMap(candidateCages);
-                return { clues: [], solvedGrid: grid, cages: candidateCages, map: generatedMap };
+                return { clues: clues, initialGrid: initialG, solvedGrid: grid, cages: candidateCages, map: generatedMap };
             }
         }
     }
@@ -420,10 +458,24 @@ async function generateGame(targetDiff = currentDifficulty) {
     console.warn(`Could not strictly match ${targetDiff} logic. Returning best-effort fallback.`);
     const fallbackGrid = emptyGrid();
     generateSolvedGrid(fallbackGrid, 3, 'standard');
-    const fallbackCages = generateCages(fallbackGrid);
+    const fallbackCages = generateCages(fallbackGrid, targetDiff);
     const fallbackMap = buildCageMap(fallbackCages);
     
-    return { clues: [], solvedGrid: fallbackGrid, cages: fallbackCages, map: fallbackMap };
+    const fallbackInitG = emptyGrid();
+    const fallbackClues = [];
+    if (targetDiff === 'easy') {
+        const numClues = 5;
+        const allCells = [];
+        for(let z=0; z<3; z++) for(let y=0; y<3; y++) for(let x=0; x<3; x++) allCells.push({z,y,x});
+        shuffleArray(allCells);
+        for(let i=0; i<numClues; i++) {
+            const c = allCells[i];
+            fallbackInitG[c.z][c.y][c.x] = fallbackGrid[c.z][c.y][c.x];
+            fallbackClues.push(`${c.z},${c.y},${c.x}`);
+        }
+    }
+    
+    return { clues: fallbackClues, initialGrid: fallbackInitG, solvedGrid: fallbackGrid, cages: fallbackCages, map: fallbackMap };
 }
 
 // ---------------------------------------------------------
@@ -1161,9 +1213,21 @@ async function newGame() {
         puzzle = await generateGame(currentDifficulty);
     }
     
-    const { clues, solvedGrid: solved, cages, map } = puzzle;
+    const { clues, initialGrid: initG, solvedGrid: solved, cages, map } = puzzle;
     
-    state = emptyGrid(); drafts = emptyDrafts(); initialGrid = emptyGrid(); clueSet = new Set(clues);
+    // Inject the parsed grid layout
+    state = emptyGrid(); 
+    initialGrid = initG || emptyGrid();
+    for (let z = 0; z < 3; z++) {
+        for (let y = 0; y < 3; y++) {
+            for (let x = 0; x < 3; x++) {
+                state[z][y][x] = initialGrid[z][y][x];
+            }
+        }
+    }
+
+    drafts = emptyDrafts(); 
+    clueSet = new Set(clues);
     undoStack = []; timerSeconds = 0; solvedGrid = solved; currentCages = cages;
     cageMap = map || buildCageMap(cages);
 
