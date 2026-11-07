@@ -6,20 +6,20 @@ let currentVariant = "killer";
 let currentCages = [];
 let cageMap = [];
 
-/* High-contrast, vibrant cage colors with maximum hue separation */
+/* High-contrast, UI-friendly cage colors (Pure vivid hues, no muddy earth tones) */
 const CAGE_COLORS = [
-    'rgba(255, 75, 75, 0.35)',    /* Vivid Red */
-    'rgba(255, 140, 0, 0.35)',    /* Deep Orange */
-    'rgba(255, 215, 0, 0.35)',    /* True Yellow / Gold */
-    'rgba(50, 215, 75, 0.35)',    /* Bright Mint Green */
-    'rgba(0, 200, 150, 0.35)',    /* Teal / Seafoam */
-    'rgba(0, 150, 255, 0.35)',    /* Royal Blue */
-    'rgba(140, 100, 255, 0.35)',  /* Indigo / Periwinkle */
-    'rgba(215, 80, 255, 0.35)',   /* Orchid Purple */
-    'rgba(255, 105, 180, 0.35)',  /* Hot Pink */
-    'rgba(139, 69, 19, 0.35)',    /* Warm Saddle Brown */
-    'rgba(112, 128, 144, 0.35)',  /* Slate Grey */
-    'rgba(0, 225, 225, 0.35)'     /* Electric Cyan */
+    'rgba(255, 59, 48, 0.35)',    /* Coral Red */
+    'rgba(255, 149, 0, 0.35)',    /* Tangerine Orange */
+    'rgba(255, 204, 0, 0.35)',    /* Sunflower Yellow */
+    'rgba(212, 251, 121, 0.35)',  /* Neon Chartreuse */
+    'rgba(76, 217, 100, 0.35)',   /* Apple Green */
+    'rgba(0, 224, 184, 0.35)',    /* Turquoise */
+    'rgba(90, 200, 250, 0.35)',   /* Light Aqua */
+    'rgba(0, 122, 255, 0.35)',    /* Bright Azure */
+    'rgba(88, 86, 214, 0.35)',    /* Deep Indigo */
+    'rgba(175, 82, 222, 0.35)',   /* Amethyst */
+    'rgba(255, 45, 85, 0.35)',    /* Strawberry Pink */
+    'rgba(255, 160, 200, 0.35)'   /* Bubblegum Pink */
 ];
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
