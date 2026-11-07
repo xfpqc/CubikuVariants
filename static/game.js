@@ -6,9 +6,9 @@ let currentVariant = "killer";
 let currentCages = [];
 let cageMap = [];
 
-/* High-contrast, UI-friendly cage colors (Pure vivid hues, no muddy earth tones) */
+/* High-contrast, UI-friendly cage colors (Distinct hues, no visual bleeding) */
 const CAGE_COLORS = [
-    'rgba(255, 59, 48, 0.35)',    /* Coral Red */
+    'rgba(255, 59, 48, 0.35)',    /* Coral Red (Warm) */
     'rgba(255, 149, 0, 0.35)',    /* Tangerine Orange */
     'rgba(255, 204, 0, 0.35)',    /* Sunflower Yellow */
     'rgba(212, 251, 121, 0.35)',  /* Neon Chartreuse */
@@ -18,9 +18,10 @@ const CAGE_COLORS = [
     'rgba(0, 122, 255, 0.35)',    /* Bright Azure */
     'rgba(88, 86, 214, 0.35)',    /* Deep Indigo */
     'rgba(175, 82, 222, 0.35)',   /* Amethyst */
-    'rgba(255, 45, 85, 0.35)',    /* Strawberry Pink */
-    'rgba(255, 160, 200, 0.35)'   /* Bubblegum Pink */
+    'rgba(255, 0, 150, 0.35)',    /* Shocking Fuchsia (Cool) */
+    'rgba(170, 185, 200, 0.35)'   /* Platinum Blue-Grey (Neutral) */
 ];
+
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
