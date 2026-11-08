@@ -1199,7 +1199,17 @@ function onCellPointerDown(e) {
 
   if (activeNumber !== null) {
     if (activeNumber === 'erase') fillCell(z, row, col, ''); else fillCell(z, row, col, activeNumber);
-    if (!stickyKeysEnabled && !pencilMode) { activeNumber = null; clearSelection(); } else selectCell(z, row, col);
+    
+    // BUG FIX: If placing this number caused it to deplete, the engine will have wiped activeNumber to null.
+    // We must intercept this and ensure the cell does NOT get re-selected by Sticky Keys!
+    if (activeNumber === null) {
+        clearSelection();
+    } else if (!stickyKeysEnabled && !pencilMode) { 
+        activeNumber = null; clearSelection(); 
+    } else { 
+        selectCell(z, row, col); 
+    }
+    
     updateKeyboardUI(); updateNumberHighlights();
   } else { selectCell(z, row, col); el.focus(); }
 }
@@ -1286,16 +1296,16 @@ async function newGame() {
     renderState(); updateDepletion(); startTimer(); saveGame(); 
     
     const greetings = [
-  "Calculations ready.", 
-  "Focus.", 
-  "🖖", 
-  "It all adds up eventually.", 
-  "The needs of the cube outweigh the needs of the one.", 
-  "Calculate.", 
-  "Don't guess.", 
-  "Good luck.", 
-  "Logic dictates.",
-  "Stay sharp."
+  "Calculations ready.", 
+  "Focus.", 
+  "🖖", 
+  "It all adds up eventually.", 
+  "The needs of the cube outweigh the needs of the one.", 
+  "Calculate.", 
+  "Don't guess.", 
+  "Good luck.", 
+  "Logic dictates.",
+  "Stay sharp."
 ];
     showMessage(greetings[Math.floor(Math.random() * greetings.length)], "info");
     
