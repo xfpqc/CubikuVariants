@@ -9,8 +9,8 @@ let cageMap = [];
 /* High-contrast, UI-friendly cage colors (Distinct hues, no visual bleeding) */
 const CAGE_COLORS = [
     'rgba(255, 59, 48, 0.35)',    /* Coral Red (Warm) */
-    'rgba(255, 149, 0, 0.35)',    /* Tangerine Orange */
-    'rgba(255, 204, 0, 0.35)',    /* Sunflower Yellow */
+    'rgba(255, 110, 0, 0.35)',    /* Deep Orange (Darkened to separate from yellow) */
+    'rgba(255, 240, 0, 0.35)',    /* Bright Lemon (Brightened to separate from orange) */
     'rgba(212, 251, 121, 0.35)',  /* Neon Chartreuse */
     'rgba(76, 217, 100, 0.35)',   /* Apple Green */
     'rgba(0, 224, 184, 0.35)',    /* Turquoise */
@@ -82,9 +82,9 @@ function generateCages(solvedGrid, difficulty = 'medium') {
         const start = unassigned.pop();
         
         let targetSize;
-        if (difficulty === 'easy') targetSize = Math.floor(Math.random() * 2) + 2; 
-        else if (difficulty === 'hard') targetSize = Math.floor(Math.random() * 3) + 3; 
-        else targetSize = Math.floor(Math.random() * 3) + 2; 
+        if (difficulty === 'easy') targetSize = Math.floor(Math.random() * 2) + 2;       // Size 2 to 3
+        else if (difficulty === 'hard') targetSize = Math.floor(Math.random() * 2) + 3;  // Size 3 to 4
+        else targetSize = Math.floor(Math.random() * 2) + 2;                             // Size 2 to 3
 
         const cageCells = [start];
         let sum = solvedGrid[start.z][start.y][start.x];
@@ -122,7 +122,7 @@ function generateCages(solvedGrid, difficulty = 'medium') {
             const offsets = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
             let merged = false;
             
-            const maxSize = difficulty === 'hard' ? 5 : (difficulty === 'easy' ? 3 : 4);
+            const maxSize = difficulty === 'hard' ? 4 : (difficulty === 'easy' ? 3 : 4);
             
             for (const [dz, dy, dx] of offsets) {
                 const nz = loneCell.z + dz, ny = loneCell.y + dy, nx = loneCell.x + dx;
@@ -1286,16 +1286,16 @@ async function newGame() {
     renderState(); updateDepletion(); startTimer(); saveGame(); 
     
     const greetings = [
-  "Calculations ready.", 
-  "Focus.", 
-  "🖖", 
-  "It all adds up eventually.", 
-  "The needs of the cube outweigh the needs of the one.", 
-  "Calculate.", 
-  "Don't guess.", 
-  "Good luck.", 
-  "Logic dictates.",
-  "Stay sharp."
+  "Calculations ready.", 
+  "Focus.", 
+  "🖖", 
+  "It all adds up eventually.", 
+  "The needs of the cube outweigh the needs of the one.", 
+  "Calculate.", 
+  "Don't guess.", 
+  "Good luck.", 
+  "Logic dictates.",
+  "Stay sharp."
 ];
     showMessage(greetings[Math.floor(Math.random() * greetings.length)], "info");
     
