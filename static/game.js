@@ -1286,11 +1286,17 @@ async function newGame() {
     renderState(); updateDepletion(); startTimer(); saveGame(); 
     
     const greetings = [
-      "Calculations ready.", "Focus.", "Fascinating... let's calculate the probabilities. 🖖", 
-      "It all adds up eventually.", "The needs of the cube outweigh the needs of the one. 🖖", 
-      "Scan the intersections.", "Highly logical, Captain. Let's solve the cube. 🖖", 
-      "Pure Spock-level calculation mode: Engaged. 🖖", "Logic dictates.", "Multiply your focus, subtract your doubts."
-    ];
+  "Calculations ready.", 
+  "Focus.", 
+  "🖖", 
+  "It all adds up eventually.", 
+  "The needs of the cube outweigh the needs of the one.", 
+  "Calculate.", 
+  "Don't guess.", 
+  "Good luck.", 
+  "Logic dictates.",
+  "Stay sharp."
+];
     showMessage(greetings[Math.floor(Math.random() * greetings.length)], "info");
     
     setTimeout(maintainCache, 500);
