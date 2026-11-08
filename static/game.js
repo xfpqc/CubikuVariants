@@ -1,5 +1,5 @@
 /**
- * Cubiku Variants v63 — Killer 3D Sudoku (Heuristic Logic Engine + Background Cache + Givens + No 1-Cell Cages)
+ * Cubiku Variants v64 — Killer 3D Sudoku (Iterative Clue Injection + Bug Fixes)
  */
 
 let currentVariant = "killer";
@@ -158,9 +158,6 @@ function generateCages(solvedGrid, difficulty = 'medium') {
     return cages;
 }
 
-// ---------------------------------------------------------
-// HEURISTIC LOGIC FILTER (THE AUTOMATED PLAYER)
-// ---------------------------------------------------------
 const COMBOS = {};
 function getCombos(targetSum, numCells, excludeDigits = []) {
     const key = `${targetSum}-${numCells}-${excludeDigits.sort().join('')}`;
@@ -209,7 +206,7 @@ function solveLogically(cagesTest, initialClues = null) {
             for (let y = 0; y < 3; y++) {
                 for (let x = 0; x < 3; x++) {
                     if (initialClues[z][y][x] !== 0) {
-                        if (!placeDigit(z, y, x, initialClues[z][y][x])) return { solved: false };
+                        if (!placeDigit(z, y, x, initialClues[z][y][x])) return { solved: false, grid };
                     }
                 }
             }
@@ -231,10 +228,10 @@ function solveLogically(cagesTest, initialClues = null) {
         for (let z = 0; z < 3; z++) for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) {
             if (grid[z][y][x] === 0) {
                 let mask = cands[z][y][x];
-                if (mask === 0) return { solved: false }; 
+                if (mask === 0) return { solved: false, grid }; 
                 if ((mask & (mask - 1)) === 0) {
                     let d = Math.log2(mask) + 1;
-                    if (!placeDigit(z, y, x, d)) return { solved: false };
+                    if (!placeDigit(z, y, x, d)) return { solved: false, grid };
                     progress = true;
                 }
             }
@@ -252,12 +249,12 @@ function solveLogically(cagesTest, initialClues = null) {
                 else emptyCells.push(c);
             }
             if (emptyCells.length === 0) {
-                if (currentSum !== cage.sum) return { solved: false };
+                if (currentSum !== cage.sum) return { solved: false, grid };
                 continue;
             }
             let target = cage.sum - currentSum;
             let combos = getCombos(target, emptyCells.length, placedDigits);
-            if (combos.length === 0) return { solved: false };
+            if (combos.length === 0) return { solved: false, grid };
 
             let validMask = 0;
             for (const combo of combos) for (const d of combo) validMask |= (1 << (d - 1));
@@ -294,7 +291,7 @@ function solveLogically(cagesTest, initialClues = null) {
         }
         if (progress) { maxTier = Math.max(maxTier, 0); continue; }
 
-        // TIER 1: Pointing Digits (Cage limits candidate to a single axis)
+        // TIER 1: Pointing Digits
         for (const cage of cagesTest) {
             let emptyCells = cage.cells.filter(c => grid[c.z][c.y][c.x] === 0);
             if (emptyCells.length < 2) continue;
@@ -342,7 +339,7 @@ function solveLogically(cagesTest, initialClues = null) {
         }
         if (progress) { maxTier = Math.max(maxTier, 1); continue; }
 
-        // TIER 2: Planar 45 and Volumetric 90 (Innies and Outies)
+        // TIER 2: Planar 45 and Volumetric 90
         for (const region of regions) {
             const intersectingCages = [];
             const regionStrs = new Set(region.cells.map(c => `${c.z},${c.y},${c.x}`));
@@ -460,40 +457,80 @@ function formatGeneratedCagesAndClues(solvedGrid, rawCages, targetDiff) {
     return { actualCages, initialG, clues };
 }
 
+function copyGrid(grid) {
+    return grid.map(z => z.map(y => [...y]));
+}
+
 async function generateGame(targetDiff = currentDifficulty) {
-    let attempts = 0;
+    let bestPuzzle = null;
+    let lowestCluesNeeded = 999;
     const diffMap = { 0: 'easy', 1: 'medium', 2: 'hard' };
 
-    while (attempts < 3000) {
-        attempts++;
+    for (let attempts = 0; attempts < 150; attempts++) {
         if (attempts % 10 === 0) await yieldToMain();
 
         const grid = emptyGrid();
         generateSolvedGrid(grid, 3, 'standard');
         const rawCages = generateCages(grid, targetDiff);
-        
         const { actualCages, initialG, clues } = formatGeneratedCagesAndClues(grid, rawCages, targetDiff);
         
-        const logicResult = solveLogically(actualCages, initialG);
+        let currentInitialG = copyGrid(initialG);
+        let currentClues = [...clues];
+        let logic = solveLogically(actualCages, currentInitialG);
 
-        if (logicResult.solved) {
-            const mappedDiff = diffMap[logicResult.maxTier] || 'hard';
-            if (mappedDiff === targetDiff) {
-                const generatedMap = buildCageMap(actualCages);
-                return { clues: clues, initialGrid: initialG, solvedGrid: grid, cages: actualCages, map: generatedMap };
+        /* ITERATIVE CLUE INJECTION: Guarantees 100% human solvability */
+        while (!logic.solved) {
+            let emptyCells = [];
+            for (let z=0; z<3; z++) for (let y=0; y<3; y++) for (let x=0; x<3; x++) {
+                if (logic.grid[z][y][x] === 0 && currentInitialG[z][y][x] === 0) emptyCells.push({z,y,x});
+            }
+            if (emptyCells.length === 0) break;
+            
+            shuffleArray(emptyCells);
+            let target = emptyCells[0];
+            currentInitialG[target.z][target.y][target.x] = grid[target.z][target.y][target.x];
+            currentClues.push(`${target.z},${target.y},${target.x}`);
+            
+            logic = solveLogically(actualCages, currentInitialG);
+        }
+
+        if (logic.solved) {
+            const mappedDiff = diffMap[logic.maxTier] || 'hard';
+            if (mappedDiff === targetDiff && currentClues.length < lowestCluesNeeded) {
+                lowestCluesNeeded = currentClues.length;
+                bestPuzzle = { clues: currentClues, initialGrid: currentInitialG, solvedGrid: grid, cages: actualCages, map: buildCageMap(actualCages) };
+                
+                // If the logic hit ideal clue targets for this difficulty, break the loop early
+                if (targetDiff === 'hard' && currentClues.length <= 1) break;
+                if (targetDiff === 'medium' && currentClues.length <= 4) break;
+                if (targetDiff === 'easy' && currentClues.length <= 8) break;
             }
         }
     }
     
-    console.warn(`Could not strictly match ${targetDiff} logic. Returning best-effort fallback.`);
-    const fallbackGrid = emptyGrid();
-    generateSolvedGrid(fallbackGrid, 3, 'standard');
-    const fallbackRawCages = generateCages(fallbackGrid, targetDiff);
+    if (bestPuzzle) return bestPuzzle;
+
+    // Fall-through: If no perfect tier matched, just force standard injection on a new board.
+    console.warn(`Could not strictly match ${targetDiff} tier perfectly. Providing best guaranteed-solvable grid.`);
+    const fbGrid = emptyGrid(); generateSolvedGrid(fbGrid, 3, 'standard');
+    const fbRawCages = generateCages(fbGrid, targetDiff);
+    const fbData = formatGeneratedCagesAndClues(fbGrid, fbRawCages, targetDiff);
     
-    const fallbackData = formatGeneratedCagesAndClues(fallbackGrid, fallbackRawCages, targetDiff);
-    const fallbackMap = buildCageMap(fallbackData.actualCages);
+    let fbLogic = solveLogically(fbData.actualCages, fbData.initialG);
+    while (!fbLogic.solved) {
+        let emptyCells = [];
+        for(let z=0; z<3; z++) for(let y=0; y<3; y++) for(let x=0; x<3; x++) {
+            if (fbLogic.grid[z][y][x] === 0 && fbData.initialG[z][y][x] === 0) emptyCells.push({z,y,x});
+        }
+        if (emptyCells.length === 0) break;
+        shuffleArray(emptyCells);
+        let target = emptyCells[0];
+        fbData.initialG[target.z][target.y][target.x] = fbGrid[target.z][target.y][target.x];
+        fbData.clues.push(`${target.z},${target.y},${target.x}`);
+        fbLogic = solveLogically(fbData.actualCages, fbData.initialG);
+    }
     
-    return { clues: fallbackData.clues, initialGrid: fallbackData.initialG, solvedGrid: fallbackGrid, cages: fallbackData.actualCages, map: fallbackMap };
+    return { clues: fbData.clues, initialGrid: fbData.initialG, solvedGrid: fbGrid, cages: fbData.actualCages, map: buildCageMap(fbData.actualCages) };
 }
 
 // ---------------------------------------------------------
@@ -1249,10 +1286,10 @@ async function newGame() {
     renderState(); updateDepletion(); startTimer(); saveGame(); 
     
     const greetings = [
-      "Calculations ready.", "Focus.", "🖖", 
-      "It all adds up eventually.", "The needs of the cube outweigh the needs of the one.", 
-      "Scan the intersections.", "Watch your Z-axis.", 
-      "Good luck.", "Logic dictates.", "Stay sharp."
+      "Calculations ready.", "Focus.", "Fascinating... let's calculate the probabilities. 🖖", 
+      "It all adds up eventually.", "The needs of the cube outweigh the needs of the one. 🖖", 
+      "Scan the intersections.", "Highly logical, Captain. Let's solve the cube. 🖖", 
+      "Pure Spock-level calculation mode: Engaged. 🖖", "Logic dictates.", "Multiply your focus, subtract your doubts."
     ];
     showMessage(greetings[Math.floor(Math.random() * greetings.length)], "info");
     
@@ -1318,13 +1355,21 @@ function init() {
 
   const btnZen = document.getElementById('btn-zen'); if (btnZen) btnZen.addEventListener('click', toggleZen);
   const btnSettingsReset = document.getElementById('btn-settings-reset-stats'); if (btnSettingsReset) btnSettingsReset.addEventListener('click', (e) => { e.stopPropagation(); resetStats(); });
+  
+  /* BUG FIX: Theme Select properly targets currentTheme now, not currentDifficulty */
   const themeSelect = document.getElementById('theme-select'); if (themeSelect) themeSelect.addEventListener('change', (e) => { 
+      currentTheme = e.target.value; 
+      document.body.setAttribute('data-theme', currentTheme);
+      savePreferences(); 
+  });
+  
+  const diffSelect = document.getElementById('difficulty-select'); if (diffSelect) diffSelect.addEventListener('change', (e) => { 
       currentDifficulty = e.target.value; 
       updateStatsUI(); 
       savePreferences(); 
       maintainCache();
   });
-  const diffSelect = document.getElementById('difficulty-select'); if (diffSelect) diffSelect.addEventListener('change', (e) => { currentDifficulty = e.target.value; updateStatsUI(); savePreferences(); });
+  
   const toggleSticky = document.getElementById('toggle-sticky-keys'); if (toggleSticky) toggleSticky.addEventListener('change', (e) => { stickyKeysEnabled = e.target.checked; savePreferences(); });
 
   document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undoLastAction(); } });
