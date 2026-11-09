@@ -769,7 +769,7 @@ let undoStack    = [];
 let activeNumber = null;
 let inspectedNumber = null;
 let currentDifficulty = "medium";
-let currentTheme = "cyan";
+let currentTheme = "gold";
 let stickyKeysEnabled = false; 
 let pencilMode = false;
 let isGameComplete = false; 
@@ -790,7 +790,7 @@ function loadPreferences() {
   if (savedPrefs) {
     try {
       const prefs = JSON.parse(savedPrefs);
-      currentTheme = prefs.theme || "cyan";
+      currentTheme = prefs.theme || "gold";
       stickyKeysEnabled = !!prefs.sticky;
       currentDifficulty = prefs.difficulty || "medium";
       
