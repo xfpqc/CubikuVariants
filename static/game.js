@@ -1,16 +1,16 @@
 /**
- * Cubiku Variants v64 — Killer 3D Sudoku (Iterative Clue Injection + Bug Fixes)
+ * Cubiku Variants v73 — Killer 3D Sudoku (Fiendish Difficulty + Interactive Tutorial)
  */
 
 let currentVariant = "killer";
 let currentCages = [];
 let cageMap = [];
 
-/* High-contrast, UI-friendly cage colors (Distinct hues, no visual bleeding) */
+/* High-contrast, UI-friendly cage colors */
 const CAGE_COLORS = [
     'rgba(255, 59, 48, 0.35)',    /* Coral Red (Warm) */
-    'rgba(255, 110, 0, 0.35)',    /* Deep Orange (Darkened to separate from yellow) */
-    'rgba(255, 240, 0, 0.35)',    /* Bright Lemon (Brightened to separate from orange) */
+    'rgba(255, 110, 0, 0.35)',    /* Deep Orange */
+    'rgba(255, 240, 0, 0.35)',    /* Bright Lemon */
     'rgba(212, 251, 121, 0.35)',  /* Neon Chartreuse */
     'rgba(76, 217, 100, 0.35)',   /* Apple Green */
     'rgba(0, 224, 184, 0.35)',    /* Turquoise */
@@ -18,8 +18,8 @@ const CAGE_COLORS = [
     'rgba(0, 122, 255, 0.35)',    /* Bright Azure */
     'rgba(88, 86, 214, 0.35)',    /* Deep Indigo */
     'rgba(175, 82, 222, 0.35)',   /* Amethyst */
-    'rgba(255, 0, 150, 0.35)',    /* Shocking Fuchsia (Cool) */
-    'rgba(170, 185, 200, 0.35)'   /* Platinum Blue-Grey (Neutral) */
+    'rgba(255, 0, 150, 0.35)',    /* Shocking Fuchsia */
+    'rgba(170, 185, 200, 0.35)'   /* Platinum Blue-Grey */
 ];
 
 function shuffleArray(array) {
@@ -82,9 +82,9 @@ function generateCages(solvedGrid, difficulty = 'medium') {
         const start = unassigned.pop();
         
         let targetSize;
-        if (difficulty === 'easy') targetSize = Math.floor(Math.random() * 2) + 2;       // Size 2 to 3
-        else if (difficulty === 'hard') targetSize = Math.floor(Math.random() * 2) + 3;  // Size 3 to 4
-        else targetSize = Math.floor(Math.random() * 2) + 2;                             // Size 2 to 3
+        if (difficulty === 'easy') targetSize = Math.floor(Math.random() * 2) + 2;       
+        else if (difficulty === 'hard' || difficulty === 'fiendish') targetSize = Math.floor(Math.random() * 2) + 3;  
+        else targetSize = Math.floor(Math.random() * 2) + 2;                             
 
         const cageCells = [start];
         let sum = solvedGrid[start.z][start.y][start.x];
@@ -122,7 +122,7 @@ function generateCages(solvedGrid, difficulty = 'medium') {
             const offsets = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
             let merged = false;
             
-            const maxSize = difficulty === 'hard' ? 4 : (difficulty === 'easy' ? 3 : 4);
+            const maxSize = (difficulty === 'hard' || difficulty === 'fiendish') ? 4 : (difficulty === 'easy' ? 3 : 4);
             
             for (const [dz, dy, dx] of offsets) {
                 const nz = loneCell.z + dz, ny = loneCell.y + dy, nx = loneCell.x + dx;
@@ -270,7 +270,7 @@ function solveLogically(cagesTest, initialClues = null) {
         }
         if (progress) { maxTier = Math.max(maxTier, 0); continue; }
 
-        // TIER 0: Hidden Singles (Axes)
+        // TIER 0: Hidden Singles
         for (let d = 1; d <= 9; d++) {
             const mask = 1 << (d - 1);
             for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) {
@@ -308,8 +308,7 @@ function solveLogically(cagesTest, initialClues = null) {
                         for (let x = 0; x < 3; x++) {
                             if (!cellsWithD.some(c => c.x === x) && grid[cellsWithD[0].z][cellsWithD[0].y][x] === 0) {
                                 if (cands[cellsWithD[0].z][cellsWithD[0].y][x] & mask) {
-                                    cands[cellsWithD[0].z][cellsWithD[0].y][x] &= ~mask;
-                                    progress = true;
+                                    cands[cellsWithD[0].z][cellsWithD[0].y][x] &= ~mask; progress = true;
                                 }
                             }
                         }
@@ -318,8 +317,7 @@ function solveLogically(cagesTest, initialClues = null) {
                         for (let y = 0; y < 3; y++) {
                             if (!cellsWithD.some(c => c.y === y) && grid[cellsWithD[0].z][y][cellsWithD[0].x] === 0) {
                                 if (cands[cellsWithD[0].z][y][cellsWithD[0].x] & mask) {
-                                    cands[cellsWithD[0].z][y][cellsWithD[0].x] &= ~mask;
-                                    progress = true;
+                                    cands[cellsWithD[0].z][y][cellsWithD[0].x] &= ~mask; progress = true;
                                 }
                             }
                         }
@@ -328,8 +326,7 @@ function solveLogically(cagesTest, initialClues = null) {
                         for (let z = 0; z < 3; z++) {
                             if (!cellsWithD.some(c => c.z === z) && grid[z][cellsWithD[0].y][cellsWithD[0].x] === 0) {
                                 if (cands[z][cellsWithD[0].y][cellsWithD[0].x] & mask) {
-                                    cands[z][cellsWithD[0].y][cellsWithD[0].x] &= ~mask;
-                                    progress = true;
+                                    cands[z][cellsWithD[0].y][cellsWithD[0].x] &= ~mask; progress = true;
                                 }
                             }
                         }
@@ -387,6 +384,94 @@ function solveLogically(cagesTest, initialClues = null) {
         }
         
         if (progress) { maxTier = Math.max(maxTier, 2); continue; }
+
+        // TIER 3: Advanced Cage Intersections (Forced Digits)
+        for (const cage of cagesTest) {
+            let currentSum = 0;
+            let emptyCells = [];
+            let placedDigits = [];
+            for (const c of cage.cells) {
+                let val = grid[c.z][c.y][c.x];
+                if (val > 0) { currentSum += val; placedDigits.push(val); }
+                else emptyCells.push(c);
+            }
+            if (emptyCells.length < 2) continue;
+            let target = cage.sum - currentSum;
+            let combos = getCombos(target, emptyCells.length, placedDigits);
+            if (combos.length === 0) continue;
+
+            let forcedMask = (1 << 9) - 1;
+            for (const combo of combos) {
+                let cm = 0;
+                for (const d of combo) cm |= (1 << (d - 1));
+                forcedMask &= cm;
+            }
+            
+            for (let d = 1; d <= 9; d++) {
+                const mask = 1 << (d - 1);
+                if (forcedMask & mask) {
+                    const cellsWithD = emptyCells.filter(c => (cands[c.z][c.y][c.x] & mask));
+                    if (cellsWithD.length > 1) {
+                        const shareZ = cellsWithD.every(c => c.z === cellsWithD[0].z);
+                        const shareY = cellsWithD.every(c => c.y === cellsWithD[0].y);
+                        const shareX = cellsWithD.every(c => c.x === cellsWithD[0].x);
+
+                        if (shareZ && shareY) {
+                            for (let x = 0; x < 3; x++) {
+                                if (!cellsWithD.some(c => c.x === x) && grid[cellsWithD[0].z][cellsWithD[0].y][x] === 0) {
+                                    if (cands[cellsWithD[0].z][cellsWithD[0].y][x] & mask) {
+                                        cands[cellsWithD[0].z][cellsWithD[0].y][x] &= ~mask; progress = true;
+                                    }
+                                }
+                            }
+                        }
+                        if (shareZ && shareX) {
+                            for (let y = 0; y < 3; y++) {
+                                if (!cellsWithD.some(c => c.y === y) && grid[cellsWithD[0].z][y][cellsWithD[0].x] === 0) {
+                                    if (cands[cellsWithD[0].z][y][cellsWithD[0].x] & mask) {
+                                        cands[cellsWithD[0].z][y][cellsWithD[0].x] &= ~mask; progress = true;
+                                    }
+                                }
+                            }
+                        }
+                        if (shareY && shareX) {
+                            for (let z = 0; z < 3; z++) {
+                                if (!cellsWithD.some(c => c.z === z) && grid[z][cellsWithD[0].y][cellsWithD[0].x] === 0) {
+                                    if (cands[z][cellsWithD[0].y][cellsWithD[0].x] & mask) {
+                                        cands[z][cellsWithD[0].y][cellsWithD[0].x] &= ~mask; progress = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (progress) { maxTier = Math.max(maxTier, 3); continue; }
+
+        // TIER 3: Planar 3D X-Wings
+        for (let d = 1; d <= 9; d++) {
+            const mask = 1 << (d - 1);
+            for (let z = 0; z < 3; z++) {
+                let rowP = [];
+                for (let y = 0; y < 3; y++) {
+                    let cols = [];
+                    for (let x = 0; x < 3; x++) if (grid[z][y][x] === 0 && (cands[z][y][x] & mask)) cols.push(x);
+                    if (cols.length === 2) rowP.push({y, cols});
+                }
+                if (rowP.length === 2 && rowP[0].cols[0] === rowP[1].cols[0] && rowP[0].cols[1] === rowP[1].cols[1]) {
+                    const c1 = rowP[0].cols[0], c2 = rowP[0].cols[1];
+                    for (let y = 0; y < 3; y++) {
+                        if (y !== rowP[0].y && y !== rowP[1].y) {
+                            if (grid[z][y][c1] === 0 && (cands[z][y][c1] & mask)) { cands[z][y][c1] &= ~mask; progress = true; }
+                            if (grid[z][y][c2] === 0 && (cands[z][y][c2] & mask)) { cands[z][y][c2] &= ~mask; progress = true; }
+                        }
+                    }
+                }
+            }
+            if (progress) break; 
+        }
+        if (progress) { maxTier = Math.max(maxTier, 3); continue; }
     }
 
     let isSolved = true;
@@ -464,7 +549,7 @@ function copyGrid(grid) {
 async function generateGame(targetDiff = currentDifficulty) {
     let bestPuzzle = null;
     let lowestCluesNeeded = 999;
-    const diffMap = { 0: 'easy', 1: 'medium', 2: 'hard' };
+    const diffMap = { 0: 'easy', 1: 'medium', 2: 'hard', 3: 'fiendish' };
 
     for (let attempts = 0; attempts < 150; attempts++) {
         if (attempts % 10 === 0) await yieldToMain();
@@ -478,7 +563,7 @@ async function generateGame(targetDiff = currentDifficulty) {
         let currentClues = [...clues];
         let logic = solveLogically(actualCages, currentInitialG);
 
-        /* ITERATIVE CLUE INJECTION: Guarantees 100% human solvability */
+        /* ITERATIVE CLUE INJECTION */
         while (!logic.solved) {
             let emptyCells = [];
             for (let z=0; z<3; z++) for (let y=0; y<3; y++) for (let x=0; x<3; x++) {
@@ -495,13 +580,13 @@ async function generateGame(targetDiff = currentDifficulty) {
         }
 
         if (logic.solved) {
-            const mappedDiff = diffMap[logic.maxTier] || 'hard';
+            const mappedDiff = diffMap[logic.maxTier] || 'fiendish';
             if (mappedDiff === targetDiff && currentClues.length < lowestCluesNeeded) {
                 lowestCluesNeeded = currentClues.length;
                 bestPuzzle = { clues: currentClues, initialGrid: currentInitialG, solvedGrid: grid, cages: actualCages, map: buildCageMap(actualCages) };
                 
-                // If the logic hit ideal clue targets for this difficulty, break the loop early
-                if (targetDiff === 'hard' && currentClues.length <= 1) break;
+                if (targetDiff === 'fiendish' && currentClues.length <= 0) break; 
+                if (targetDiff === 'hard' && currentClues.length <= 2) break;
                 if (targetDiff === 'medium' && currentClues.length <= 4) break;
                 if (targetDiff === 'easy' && currentClues.length <= 8) break;
             }
@@ -510,7 +595,7 @@ async function generateGame(targetDiff = currentDifficulty) {
     
     if (bestPuzzle) return bestPuzzle;
 
-    // Fall-through: If no perfect tier matched, just force standard injection on a new board.
+    // Fall-through
     console.warn(`Could not strictly match ${targetDiff} tier perfectly. Providing best guaranteed-solvable grid.`);
     const fbGrid = emptyGrid(); generateSolvedGrid(fbGrid, 3, 'standard');
     const fbRawCages = generateCages(fbGrid, targetDiff);
@@ -536,7 +621,7 @@ async function generateGame(targetDiff = currentDifficulty) {
 // ---------------------------------------------------------
 // BACKGROUND CACHING SYSTEM
 // ---------------------------------------------------------
-let boardCache = { easy: [], medium: [], hard: [] };
+let boardCache = { easy: [], medium: [], hard: [], fiendish: [] };
 let isCaching = false;
 
 function saveCache() {
@@ -548,9 +633,12 @@ function loadCache() {
     if (saved) {
         try { 
             boardCache = JSON.parse(saved); 
-            if (!boardCache.easy) boardCache = { easy: [], medium: [], hard: [] };
+            if (!boardCache.easy) boardCache.easy = [];
+            if (!boardCache.medium) boardCache.medium = [];
+            if (!boardCache.hard) boardCache.hard = [];
+            if (!boardCache.fiendish) boardCache.fiendish = [];
         } catch(e) { 
-            boardCache = { easy: [], medium: [], hard: [] }; 
+            boardCache = { easy: [], medium: [], hard: [], fiendish: [] }; 
         }
     }
 }
@@ -558,10 +646,12 @@ function loadCache() {
 async function maintainCache() {
     if (isCaching) return;
     isCaching = true;
-    const diffs = ['easy', 'medium', 'hard'];
+    const diffs = ['easy', 'medium', 'hard', 'fiendish'];
     
     for (const diff of diffs) {
-        while (boardCache[diff].length < 2) {
+        // Only queue up 1 fiendish at a time to prevent lag spikes, 2 for others
+        const targetCount = diff === 'fiendish' ? 1 : 2;
+        while (boardCache[diff].length < targetCount) {
             console.log(`[Cache] Generating backup for ${diff}...`);
             const puzzle = await generateGame(diff);
             boardCache[diff].push(puzzle);
@@ -685,9 +775,10 @@ let pencilMode = false;
 let isGameComplete = false; 
 
 let stats = {
-  easy:   { wins: 0, bestTime: null, totalTime: 0, lastTime: null },
-  medium: { wins: 0, bestTime: null, totalTime: 0, lastTime: null },
-  hard:   { wins: 0, bestTime: null, totalTime: 0, lastTime: null }
+  easy:     { wins: 0, bestTime: null, totalTime: 0, lastTime: null },
+  medium:   { wins: 0, bestTime: null, totalTime: 0, lastTime: null },
+  hard:     { wins: 0, bestTime: null, totalTime: 0, lastTime: null },
+  fiendish: { wins: 0, bestTime: null, totalTime: 0, lastTime: null }
 };
 
 function savePreferences() {
@@ -724,7 +815,11 @@ function saveStats() {
 function loadStats() {
   const savedStats = localStorage.getItem('cubiku_killer_stats_v2');
   if (savedStats) {
-    try { stats = JSON.parse(savedStats); } catch(e) {}
+    try { 
+        const loaded = JSON.parse(savedStats);
+        stats = { ...stats, ...loaded };
+        if (!stats.fiendish) stats.fiendish = { wins: 0, bestTime: null, totalTime: 0, lastTime: null };
+    } catch(e) {}
   } 
   updateStatsUI();
 }
@@ -764,6 +859,8 @@ function updateStatsUI() {
 
 function saveGame() {
   if (clueSet.size === 0 && currentCages.length === 0) return; 
+  if (tutorialActive) return; // Do not overwrite save with tutorial board
+  
   const saveData = {
     state, drafts: drafts.map(zLevel => zLevel.map(row => row.map(cellSet => Array.from(cellSet)))),
     initialGrid, solvedGrid, clues: Array.from(clueSet), cages: currentCages, difficulty: currentDifficulty, timer: timerSeconds
@@ -867,11 +964,12 @@ function hideMessage() {
 }
 
 function clearHighlights() {
-  document.querySelectorAll('.cell.active-cell, .cell.constraint-highlight, .cell.cage-highlight')
-    .forEach(el => el.classList.remove('active-cell', 'constraint-highlight', 'cage-highlight'));
+  document.querySelectorAll('.cell.active-cell, .cell.constraint-highlight, .cell.cage-highlight, .cell.tutorial-highlight')
+    .forEach(el => el.classList.remove('active-cell', 'constraint-highlight', 'cage-highlight', 'tutorial-highlight'));
 }
 
 function applyCrosshair(selZ, selRow, selCol) {
+  if(tutorialActive) return; 
   for (let z = 0; z < 3; z++) {
     for (let r = 0; r < 3; r++) {
       for (let c = 0; c < 3; c++) {
@@ -897,6 +995,7 @@ function applyCrosshair(selZ, selRow, selCol) {
 }
 
 function selectCell(z, row, col) {
+  if(tutorialActive) return;
   clearHighlights();
   inspectedNumber = null;
   selected = clueSet.has(`${z},${row},${col}`) ? null : { z, row, col };
@@ -908,7 +1007,8 @@ function clearSelection() { clearHighlights(); selected = null; inspectedNumber 
 
 function updateNumberHighlights() {
   document.querySelectorAll('.cell').forEach(el => el.classList.remove('number-highlight'));
-  
+  if(tutorialActive) return;
+
   const targetVal = activeNumber !== null && activeNumber !== 'erase' && activeNumber !== 'undo' && activeNumber !== 'pencil' 
                     ? Number(activeNumber) : (inspectedNumber !== null ? Number(inspectedNumber) : null);
   if (targetVal === null) return;
@@ -1036,7 +1136,7 @@ function setLoading(on) {
 }
 
 function undoLastAction() {
-  if (isGameComplete || undoStack.length === 0) return;
+  if (isGameComplete || undoStack.length === 0 || tutorialActive) return;
   const action = undoStack.pop();
 
   if (action.type === 'auto_draft_clear') {
@@ -1090,7 +1190,7 @@ function removeDraftFromPeers(z, row, col, digit) {
 }
 
 function fillCell(z, row, col, digitStr) {
-  if (isGameComplete || clueSet.has(`${z},${row},${col}`)) return;
+  if (isGameComplete || clueSet.has(`${z},${row},${col}`) || tutorialActive) return;
   const el = getCell(z, row, col); if (!el) return;
   const digit = digitStr ? Number(digitStr) : 0;
   const beforeVal = state[z][row][col];
@@ -1181,6 +1281,7 @@ function flashConflicts(z, row, col, value) {
 }
 
 function onCellFocus(e) {
+  if(tutorialActive) return;
   const el = e.currentTarget; const z = Number(el.dataset.z), row = Number(el.dataset.row), col = Number(el.dataset.col);
   if (clueSet.has(`${z},${row},${col}`)) { el.blur(); return; }
   if (activeNumber === null && !selected && inspectedNumber === null) selectCell(z, row, col);
@@ -1188,6 +1289,8 @@ function onCellFocus(e) {
 
 function onCellPointerDown(e) {
   e.preventDefault(); 
+  if(tutorialActive) return;
+
   const el = e.currentTarget; const z = Number(el.dataset.z), row = Number(el.dataset.row), col = Number(el.dataset.col);
   
   if (inspectedNumber !== null) { inspectedNumber = null; clearHighlights(); }
@@ -1200,8 +1303,8 @@ function onCellPointerDown(e) {
   if (activeNumber !== null) {
     if (activeNumber === 'erase') fillCell(z, row, col, ''); else fillCell(z, row, col, activeNumber);
     
-    // BUG FIX: If placing this number caused it to deplete, the engine will have wiped activeNumber to null.
-    // We must intercept this and ensure the cell does NOT get re-selected by Sticky Keys!
+    // BUG FIX: If placing this number caused it to deplete, the engine wiped activeNumber to null.
+    // Intercept to ensure the cell does NOT get re-selected by Sticky Keys!
     if (activeNumber === null) {
         clearSelection();
     } else if (!stickyKeysEnabled && !pencilMode) { 
@@ -1215,6 +1318,7 @@ function onCellPointerDown(e) {
 }
 
 function onCellKeydown(e) {
+  if(tutorialActive) return;
   const el = e.currentTarget; const z = Number(el.dataset.z), row = Number(el.dataset.row), col = Number(el.dataset.col);
 
   if (e.key === 'Backspace' || e.key === 'Delete') {
@@ -1232,7 +1336,7 @@ function onCellKeydown(e) {
 }
 
 function handleKeyboardTap(valStr) {
-  if (!valStr) return; 
+  if (!valStr || tutorialActive) return; 
   if (valStr === 'undo') { undoLastAction(); return; }
   clearHighlights(); inspectedNumber = null;
   if (valStr !== 'erase' && valStr !== 'pencil') {
@@ -1258,6 +1362,7 @@ function handleKeyboardTap(valStr) {
 }
 
 async function newGame() {
+  if (tutorialActive) endTutorial();
   setLoading(true); hideMessage(); stopTimer(); clearSave(); clearSelection(); isGameComplete = false; 
   pencilMode = false; activeNumber = null;
   
@@ -1296,17 +1401,10 @@ async function newGame() {
     renderState(); updateDepletion(); startTimer(); saveGame(); 
     
     const greetings = [
-  "Calculations ready.", 
-  "Focus.", 
-  "🖖", 
-  "It all adds up eventually.", 
-  "The needs of the cube outweigh the needs of the one.", 
-  "Calculate.", 
-  "Don't guess.", 
-  "Good luck.", 
-  "Logic dictates.",
-  "Stay sharp."
-];
+      "Calculations ready.", "Focus.", "🖖", "It all adds up eventually.", 
+      "The needs of the cube outweigh the needs of the one.", "Calculate.", 
+      "Don't guess.", "Logic dictates.", "Stay sharp."
+    ];
     showMessage(greetings[Math.floor(Math.random() * greetings.length)], "info");
     
     setTimeout(maintainCache, 500);
@@ -1317,7 +1415,7 @@ async function newGame() {
 }
 
 async function checkSolution() {
-  if (isGameComplete) return; 
+  if (isGameComplete || tutorialActive) return; 
   hideMessage(); document.querySelectorAll('.cell.conflict').forEach(c => c.classList.remove('conflict')); setLoading(true);
   await new Promise(resolve => setTimeout(resolve, 50));
 
@@ -1341,6 +1439,125 @@ async function checkSolution() {
       }
     }
   } catch (err) { showMessage(`Could not check solution: ${err.message}`, 'error'); } finally { setLoading(false); }
+}
+
+// ---------------------------------------------------------
+// INTERACTIVE TUTORIAL
+// ---------------------------------------------------------
+let tutorialActive = false;
+let tutorialBackup = null;
+let tutorialStep = 0;
+
+const tutorialSteps = [
+    { 
+        title: "Welcome to 3D", 
+        text: "A standard Sudoku is 9x9. Killer Cubiku is a 3x3x3 cube, displayed as three flat depth slices (z = 0, z = 1, and z = 2).", 
+        setup: () => { clearHighlights(); } 
+    },
+    { 
+        title: "The Planes", 
+        text: "Every 3x3 slice across all three dimensions (horizontal, vertical, and straight through the depth pillars) must contain the digits 1 through 9 exactly once.", 
+        setup: () => { 
+            clearHighlights(); 
+            for(let i=0; i<3; i++) for(let j=0; j<3; j++) getCell(0, i, j).classList.add('tutorial-highlight');
+        } 
+    },
+    { 
+        title: "The Cages", 
+        text: "The colored areas are Cages. Digits cannot repeat inside a single cage, and they must add up to the small target number in the top-left corner.", 
+        setup: () => {
+            clearHighlights();
+            getCell(0, 0, 0).classList.add('tutorial-highlight'); getCell(0, 0, 1).classList.add('tutorial-highlight');
+        } 
+    },
+    { 
+        title: "The Rule of 45", 
+        text: "Because every 3x3 plane always contains exactly the digits 1-9, the total sum of the entire plane is ALWAYS 45. This is your secret weapon.", 
+        setup: () => {
+            clearHighlights();
+            for(let i=0; i<3; i++) for(let j=0; j<3; j++) getCell(1, i, j).classList.add('tutorial-highlight');
+        } 
+    },
+    { 
+        title: "Innies & Outies", 
+        text: "By adding up cages that cover a plane, you can subtract the plane's total of 45 to deduce the values of cells hanging inside or outside the region. Good luck!", 
+        setup: () => { clearHighlights(); } 
+    }
+];
+
+function startTutorial() {
+    if (tutorialActive) return;
+    document.getElementById('settings-panel').style.display = 'none';
+    tutorialActive = true;
+    
+    tutorialBackup = {
+        state: copyGrid(state),
+        cages: currentCages,
+        map: cageMap,
+        clues: new Set(clueSet),
+        timer: timerSeconds,
+        drafts: drafts.map(zL => zL.map(r => r.map(c => new Set(c))))
+    };
+    stopTimer();
+    
+    state = emptyGrid();
+    drafts = emptyDrafts();
+    clueSet = new Set();
+    currentCages = [
+        { id: 0, cells: [{z:0,y:0,x:0}, {z:0,y:0,x:1}], sum: 15, color: CAGE_COLORS[0] },
+        { id: 1, cells: [{z:1,y:1,x:1}, {z:1,y:1,x:2}], sum: 7, color: CAGE_COLORS[2] }
+    ];
+    cageMap = buildCageMap(currentCages);
+    
+    document.getElementById('tutorial-overlay').classList.remove('hidden');
+    tutorialStep = 0;
+    updateTutorialUI();
+}
+
+function updateTutorialUI() {
+    const step = tutorialSteps[tutorialStep];
+    document.getElementById('tutorial-title').textContent = step.title;
+    document.getElementById('tutorial-text').textContent = step.text;
+    
+    const btnPrev = document.getElementById('btn-tut-prev');
+    const btnNext = document.getElementById('btn-tut-next');
+    
+    btnPrev.style.visibility = tutorialStep === 0 ? 'hidden' : 'visible';
+    btnNext.textContent = tutorialStep === tutorialSteps.length - 1 ? 'Finish' : 'Next';
+    
+    renderState();
+    step.setup(); 
+}
+
+function nextTutorialStep() {
+    if (tutorialStep < tutorialSteps.length - 1) {
+        tutorialStep++; updateTutorialUI();
+    } else {
+        endTutorial();
+    }
+}
+
+function prevTutorialStep() {
+    if (tutorialStep > 0) { tutorialStep--; updateTutorialUI(); }
+}
+
+function endTutorial() {
+    if (!tutorialActive) return;
+    tutorialActive = false;
+    document.getElementById('tutorial-overlay').classList.add('hidden');
+    clearHighlights();
+    
+    if (tutorialBackup) {
+        state = tutorialBackup.state;
+        currentCages = tutorialBackup.cages;
+        cageMap = tutorialBackup.map;
+        clueSet = tutorialBackup.clues;
+        timerSeconds = tutorialBackup.timer;
+        drafts = tutorialBackup.drafts;
+        tutorialBackup = null;
+        renderState();
+        startTimer();
+    }
 }
 
 function repairDOM() {
@@ -1371,8 +1588,8 @@ function init() {
 
   const btnZen = document.getElementById('btn-zen'); if (btnZen) btnZen.addEventListener('click', toggleZen);
   const btnSettingsReset = document.getElementById('btn-settings-reset-stats'); if (btnSettingsReset) btnSettingsReset.addEventListener('click', (e) => { e.stopPropagation(); resetStats(); });
+  const btnSettingsTut = document.getElementById('btn-settings-tutorial'); if (btnSettingsTut) btnSettingsTut.addEventListener('click', startTutorial);
   
-  /* BUG FIX: Theme Select properly targets currentTheme now, not currentDifficulty */
   const themeSelect = document.getElementById('theme-select'); if (themeSelect) themeSelect.addEventListener('change', (e) => { 
       currentTheme = e.target.value; 
       document.body.setAttribute('data-theme', currentTheme);
@@ -1388,6 +1605,11 @@ function init() {
   
   const toggleSticky = document.getElementById('toggle-sticky-keys'); if (toggleSticky) toggleSticky.addEventListener('change', (e) => { stickyKeysEnabled = e.target.checked; savePreferences(); });
 
+  /* Tutorial UI Hooks */
+  document.getElementById('btn-tut-prev').addEventListener('click', prevTutorialStep);
+  document.getElementById('btn-tut-next').addEventListener('click', nextTutorialStep);
+  document.getElementById('btn-close-tutorial').addEventListener('click', endTutorial);
+
   document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undoLastAction(); } });
   document.querySelectorAll('.key-btn').forEach(btn => btn.addEventListener('click', (e) => handleKeyboardTap(e.currentTarget.dataset.val)));
   document.addEventListener('click', (e) => {
@@ -1396,7 +1618,7 @@ function init() {
   });
 
   document.addEventListener('pointerdown', (e) => {
-    if (!e.target.closest('.slices-container') && !e.target.closest('.keyboard-container') && !e.target.closest('.top-action-bar') && !e.target.closest('.settings-panel') && !e.target.closest('.modal-overlay')) {
+    if (!e.target.closest('.slices-container') && !e.target.closest('.keyboard-container') && !e.target.closest('.top-action-bar') && !e.target.closest('.settings-panel') && !e.target.closest('.tutorial-overlay')) {
       activeNumber = null; updateKeyboardUI(); clearSelection();
       if (document.activeElement && document.activeElement.classList.contains('cell')) document.activeElement.blur();
     }
