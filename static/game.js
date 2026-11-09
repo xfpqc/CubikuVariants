@@ -782,11 +782,11 @@ let stats = {
 };
 
 function savePreferences() {
-  localStorage.setItem('cubiku_killer_prefs', JSON.stringify({ theme: currentTheme, sticky: stickyKeysEnabled, difficulty: currentDifficulty }));
+  localStorage.setItem('cubiku_killer_prefs_v2', JSON.stringify({ theme: currentTheme, sticky: stickyKeysEnabled, difficulty: currentDifficulty }));
 }
 
 function loadPreferences() {
-  const savedPrefs = localStorage.getItem('cubiku_killer_prefs');
+  const savedPrefs = localStorage.getItem('cubiku_killer_prefs_v2');
   if (savedPrefs) {
     try {
       const prefs = JSON.parse(savedPrefs);
